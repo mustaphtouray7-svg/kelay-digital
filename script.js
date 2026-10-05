@@ -2,7 +2,7 @@
 
 const CONTACT_DETAILS = {
   email: "mustaphtouray7@gmail.com",
-  whatsappNumber: "589066"
+  whatsappNumber: "5889066"
 };
 
 const menuButton = document.querySelector(".menu-toggle");
@@ -80,4 +80,22 @@ document.querySelectorAll('[data-contact="whatsapp"]').forEach((link) => {
 const yearElement = document.querySelector("#year");
 if (yearElement) {
   yearElement.textContent = new Date().getFullYear();
+}
+
+
+const serviceSearch = document.querySelector("#service-search");
+const serviceCards = Array.from(document.querySelectorAll("[data-service-card]"));
+const serviceEmpty = document.querySelector("#service-empty");
+
+if (serviceSearch && serviceCards.length) {
+  serviceSearch.addEventListener("input", () => {
+    const query = serviceSearch.value.trim().toLowerCase();
+    let visible = 0;
+    serviceCards.forEach((card) => {
+      const matches = !query || card.dataset.search.toLowerCase().includes(query);
+      card.hidden = !matches;
+      if (matches) visible += 1;
+    });
+    if (serviceEmpty) serviceEmpty.hidden = visible !== 0;
+  });
 }
