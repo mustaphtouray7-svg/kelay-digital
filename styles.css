@@ -433,3 +433,28 @@ h1 span,h2 span,.blue-period{color:#0066cc}
 .service-empty{margin:24px 0 0;text-align:center;color:#555861;font-size:12px}
 @media(max-width:900px){.service-library{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){.service-library{grid-template-columns:1fr}.service-search-wrap{margin-bottom:22px}.service-search{min-height:46px}}
+
+
+/* Compact service library — large lesson-style buttons */
+.compact-services{padding-top:58px;padding-bottom:72px}
+.compact-services-heading{text-align:center;max-width:680px;margin:0 auto 28px}
+.compact-services-heading .eyebrow{margin-bottom:10px}
+.compact-services-heading h2{margin:0;font-size:clamp(32px,5vw,54px);line-height:1.02;letter-spacing:-1.8px}
+.compact-services-heading>p:last-child{margin:12px 0 0;color:#555861;font-size:13px}
+.service-button-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:900px;margin:0 auto}
+.service-big-button{min-height:118px;padding:22px 24px;display:grid;grid-template-columns:54px 1fr 34px;align-items:center;gap:16px;border:1px solid #d9dee6;border-radius:10px;background:#fff;color:#0b0b0f;text-decoration:none;box-sizing:border-box;transition:transform .18s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease}
+.service-big-button:hover{transform:translateY(-3px);border-color:#0066cc;box-shadow:0 12px 28px rgba(0,102,204,.10)}
+.service-big-button:focus-visible{outline:3px solid #1685ff;outline-offset:3px}
+.service-big-button:nth-child(5){grid-column:1/-1;max-width:443px;width:100%;justify-self:center}
+.service-big-number{font-size:12px;font-weight:800;color:#0066cc;letter-spacing:.8px}
+.service-big-button strong{display:block;font-family:"Manrope",sans-serif;font-size:18px;line-height:1.15}
+.service-big-button small{display:block;margin-top:7px;color:#6b727c;font-size:11px;line-height:1.3}
+.service-big-button b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#0066cc;color:#fff;font-size:16px;font-weight:500}
+.service-big-button:hover b{background:#0b0b0f}
+@media(max-width:640px){
+  .compact-services{padding-top:42px;padding-bottom:50px}
+  .service-button-grid{grid-template-columns:1fr;gap:10px}
+  .service-big-button{min-height:92px;padding:17px 18px;grid-template-columns:42px 1fr 32px}
+  .service-big-button:nth-child(5){grid-column:auto;max-width:none}
+  .service-big-button strong{font-size:16px}
+}
