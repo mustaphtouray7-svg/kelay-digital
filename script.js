@@ -9,41 +9,56 @@ const menuButton = document.querySelector(".menu-toggle");
 const navigation = document.querySelector("#primary-nav");
 
 function closeMenu() {
+  if (!menuButton || !navigation) return;
   menuButton.setAttribute("aria-expanded", "false");
   menuButton.setAttribute("aria-label", "Open navigation");
   navigation.classList.remove("is-open");
 }
 
-menuButton.addEventListener("click", () => {
-  const isExpanded = menuButton.getAttribute("aria-expanded") === "true";
-  menuButton.setAttribute("aria-expanded", String(!isExpanded));
-  menuButton.setAttribute("aria-label", isExpanded ? "Open navigation" : "Close navigation");
-  navigation.classList.toggle("is-open", !isExpanded);
-});
+if (menuButton && navigation) {
+  menuButton.addEventListener("click", () => {
+    const isExpanded = menuButton.getAttribute("aria-expanded") === "true";
+    menuButton.setAttribute("aria-expanded", String(!isExpanded));
+    menuButton.setAttribute(
+      "aria-label",
+      isExpanded ? "Open navigation" : "Close navigation"
+    );
+    navigation.classList.toggle("is-open", !isExpanded);
+  });
 
-navigation.addEventListener("click", (event) => {
-  if (event.target.closest("a")) closeMenu();
-});
+  navigation.addEventListener("click", (event) => {
+    if (event.target.closest("a")) closeMenu();
+  });
 
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && navigation.classList.contains("is-open")) {
-    closeMenu();
-    menuButton.focus();
-  }
-});
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && navigation.classList.contains("is-open")) {
+      closeMenu();
+      menuButton.focus();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 640 && navigation.classList.contains("is-open")) {
+      closeMenu();
+    }
+  });
+}
 
 document.querySelectorAll('[data-contact="email"]').forEach((link) => {
   if (CONTACT_DETAILS.email) {
     link.href = `mailto:${CONTACT_DETAILS.email}`;
-    link.textContent = link.classList.contains("button") ? "Email Kelay Digital" : CONTACT_DETAILS.email;
+    if (!link.classList.contains("button")) {
+      link.textContent = CONTACT_DETAILS.email;
+    }
   } else {
     link.removeAttribute("href");
     link.classList.add("is-placeholder");
+    link.setAttribute("aria-disabled", "true");
+    link.setAttribute("title", "Business email will be added soon");
     if (link.classList.contains("button")) {
-      link.setAttribute("aria-disabled", "true");
       link.addEventListener("click", (event) => event.preventDefault());
     } else {
-      link.textContent = "Email contact details coming soon";
+      link.textContent = "Business email coming soon";
     }
   }
 });
@@ -56,7 +71,13 @@ document.querySelectorAll('[data-contact="whatsapp"]').forEach((link) => {
   } else {
     link.removeAttribute("href");
     link.classList.add("is-placeholder");
+    link.setAttribute("aria-disabled", "true");
+    link.setAttribute("title", "WhatsApp number will be added soon");
+    link.textContent = "WhatsApp contact coming soon";
   }
 });
 
-document.querySelector("#year").textContent = new Date().getFullYear();
+const yearElement = document.querySelector("#year");
+if (yearElement) {
+  yearElement.textContent = new Date().getFullYear();
+}
