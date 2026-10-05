@@ -1,7 +1,7 @@
 "use strict";
 
 const CONTACT_DETAILS = {
-  email: "mustatoura7@gmail.com",
+  email: "mustaphtouray7@gmail.com",
   whatsappNumber: "589066"
 };
 
