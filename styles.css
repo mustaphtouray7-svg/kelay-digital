@@ -414,3 +414,22 @@ h1 span,h2 span,.blue-period{color:#0066cc}
 .whatsapp-label{font-size:13px;font-weight:700;color:#0b0b0f}
 .whatsapp-contact strong{margin-left:auto;font-size:14px;color:#0066cc}
 @media(max-width:680px){.whatsapp-contact{padding:13px}.whatsapp-label{font-size:12px}}
+
+
+/* Services library — inspired by the Lesson Project home page */
+.services-heading{align-items:end}
+.service-search-wrap{max-width:520px;margin:0 auto 30px}
+.service-search-label{display:block;margin-bottom:8px;color:#0b0b0f;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+.service-search{width:100%;min-height:48px;padding:0 16px;border:1px solid #d9dee6;border-radius:8px;background:#fff;color:#0b0b0f;font:500 13px "DM Sans",sans-serif;outline:none;box-sizing:border-box}
+.service-search::placeholder{color:#89929c}
+.service-search:focus{border-color:#0066cc;box-shadow:0 0 0 3px #eaf3ff}
+.service-library{grid-template-columns:repeat(3,1fr)}
+.service-link-card{position:relative;display:block;color:inherit;text-decoration:none;cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.service-link-card:hover{transform:translateY(-4px)}
+.service-link-card:focus-visible{outline:3px solid #1685ff;outline-offset:3px}
+.service-link-card .card-arrow{display:inline-flex;position:static;margin-top:22px;align-items:center;justify-content:center;min-height:34px;padding:0 13px;border:1px solid #d9dee6;border-radius:6px;background:#fff;color:#0b0b0f;font-size:9px;font-weight:700;text-decoration:none}
+.service-link-card:hover .card-arrow{border-color:#0066cc;background:#0066cc;color:#fff}
+.service-link-card[hidden]{display:none}
+.service-empty{margin:24px 0 0;text-align:center;color:#555861;font-size:12px}
+@media(max-width:900px){.service-library{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.service-library{grid-template-columns:1fr}.service-search-wrap{margin-bottom:22px}.service-search{min-height:46px}}
