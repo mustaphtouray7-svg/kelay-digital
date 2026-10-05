@@ -319,3 +319,90 @@ h2 { margin-bottom: 0; font-size: clamp(34px,4.2vw,46px); font-weight: 700; lett
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { scroll-behavior: auto!important; animation-duration: .01ms!important; animation-iteration-count: 1!important; transition-duration: .01ms!important; }
 }
+
+
+/* Kelay Digital / TriNova-inspired brand refresh: blue, white, black only */
+:root {
+  --ink:#0b0b0f;
+  --muted:#555861;
+  --blue:#0066cc;
+  --blue-bright:#1685ff;
+  --pale-blue:#eaf3ff;
+  --paper:#ffffff;
+  --wash:#f6f8fb;
+  --line:#d9dee6;
+}
+body{color:var(--ink);background:#fff}
+.site-header{background:#0b0b0f;border-bottom:1px solid #222;backdrop-filter:none}
+.brand-name{color:#fff}
+.brand-name span{color:var(--blue-bright)}
+.primary-nav{color:#fff}
+.primary-nav>a:not(.nav-contact):hover{color:#4da3ff}
+.nav-contact{border-color:#0066cc;background:#0066cc;color:#fff}
+.nav-contact span{color:#fff}
+.nav-contact:hover{border-color:#1685ff;background:#1685ff}
+.menu-toggle{border-color:#333;background:#0b0b0f}
+.menu-toggle span{background:#fff}
+.hero{background:#fff}
+.eyebrow{color:#0066cc}
+.status-dot{background:#0066cc;box-shadow:0 0 0 4px #dbeaff}
+h1 span,h2 span,.blue-period{color:#0066cc}
+.hero-description,.section-intro,.service-card p,.about-copy>p:not(.eyebrow),.approach-grid p{color:#555861}
+.button-primary{background:#0066cc;box-shadow:none}
+.button-primary:hover{background:#1685ff;box-shadow:none}
+.text-link{color:#0b0b0f}
+.text-link span,.tag-icon,.hero-bottom a,.art-caption span,.card-arrow:hover,.portfolio-note span,.approach-grid article>span,.back-top:hover,.footer-bottom a span,.footer-bottom a:hover{color:#0066cc}
+.hero-note{color:#555861}
+.note-line,.hero-bottom-line{background:#a9c8e8}
+.art-glow{background:radial-gradient(circle,#eaf3ff 0%,rgba(234,243,255,.75) 48%,rgba(234,243,255,0) 72%)}
+.art-orbit{border-color:rgba(0,102,204,.2)}
+.browser-card{box-shadow:0 24px 65px rgba(0,0,0,.12)}
+.mock-brand,.mock-headline{color:#0b0b0f}
+.mock-brand span,.mock-button{background:#0066cc}
+.mock-copy{background:#dfe3e8}
+.mock-art{background:#eaf3ff}
+.mock-sun{background:#0066cc}
+.mock-hill{background:#0b0b0f}
+.hill-front{background:#0066cc}
+.floating-tag{color:#0b0b0f;border-color:#d9dee6;box-shadow:0 10px 26px rgba(0,0,0,.08)}
+.tag-spark span{color:#0066cc}
+.hero-bottom{color:#555861}
+.service-card{border-color:#d9dee6}
+.service-card:hover{border-color:#0066cc;box-shadow:0 16px 36px rgba(0,102,204,.10)}
+.service-icon{background:#eaf3ff;color:#0066cc}
+.icon-app,.icon-design,.icon-brand,.icon-digital{background:#eaf3ff;color:#0066cc}
+.icon-design span{border-color:#0066cc}
+.icon-design i,.icon-design b{background:#0066cc}
+.icon-brand span,.icon-brand i{color:#0066cc}
+.icon-digital{color:#0066cc}
+.icon-digital b{background:#0066cc}
+.service-card li{background:#f1f4f8;color:#555861}
+.portfolio-section{background:#0b0b0f;color:#fff}
+.portfolio-section .eyebrow,.portfolio-section .portfolio-note span{color:#4da3ff}
+.portfolio-section .section-intro,.portfolio-section .project-meta>div>span,.portfolio-section .portfolio-note{color:#b8bec8}
+.project-cafe,.project-brand,.project-app{background:#fff}
+.about-art{background:#eaf3ff}
+.shape-a{background:#cfe3fa}
+.shape-b{background:#8fc2f5}
+.shape-c{border-color:rgba(0,102,204,.3);background:rgba(255,255,255,.7)}
+.about-monogram{color:#0066cc}
+.about-monogram span{color:#0b0b0f}
+.approach-section{background:#fff}
+.approach-grid article{border-color:#d9dee6}
+.contact-section{background:#0066cc}
+.contact-copy .eyebrow{color:#dcecff}
+.contact-period{color:#fff}
+.contact-copy>p:not(.eyebrow){color:#eaf3ff}
+.button-light{color:#0066cc}
+.contact-details{border-color:rgba(255,255,255,.35);background:#0b0b0f}
+.contact-detail-icon,.contact-details>div>span{color:#9dccff}
+.contact-details>p{color:#dbeaff}
+.closing-strip{background:#0b0b0f;border-color:#222}
+.closing-strip .container{color:#b8bec8}
+.closing-strip i{color:#4da3ff}
+.site-footer{background:#0066cc;color:#fff}
+.footer-main{border-color:rgba(255,255,255,.22)}
+.footer-main>p,.footer-bottom{color:#dbeaff}
+.footer-bottom a{color:#fff}
+.footer-bottom a span{color:#fff}
+.skip-link{background:#fff;color:#0b0b0f}
