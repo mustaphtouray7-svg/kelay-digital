@@ -11,3 +11,35 @@
 @media(max-width:1000px){.phone-grid,.logo-grid,.flyer-grid,.digital-grid{grid-template-columns:repeat(3,1fr)}.phone-grid .phone-card:nth-child(4),.phone-grid .phone-card:nth-child(5){margin-top:10px}.website-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:680px){.showcase-container{width:calc(100% - 40px)}.nav{min-height:66px}.showcase-tabs{top:66px}.showcase-hero{padding:65px 0}.showcase-hero h1{font-size:50px;letter-spacing:-3.5px}.sample-note{align-items:flex-start;flex-direction:column;gap:2px}.showcase-section{padding:68px 0}.section-head{display:block}.section-head>p{margin-top:15px}.website-grid,.phone-grid,.flyer-grid,.logo-grid,.digital-grid,.brand-subgrid{grid-template-columns:1fr}.phone{max-width:210px}.flyer{min-height:420px}.logo-card{padding:30px}.showcase-footer .showcase-container{flex-wrap:wrap;padding:18px 0}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+/* Kelay Digital / TriNova-inspired showcase palette */
+:root{--ink:#0b0b0f;--muted:#555861;--blue:#0066cc;--bright:#1685ff;--pale:#eaf3ff;--paper:#fff;--wash:#f6f8fb;--line:#d9dee6}
+body{color:#0b0b0f;background:#fff}
+.showcase-header{background:#0b0b0f;border-bottom-color:#222;backdrop-filter:none}
+.brand-name{color:#fff}.brand-name span,.back-link:hover{color:#4da3ff}.back-link{color:#fff}
+.showcase-hero{background:#fff;border-color:#d9dee6}.showcase-hero h1 span,.sample-note strong{color:#0066cc}
+.showcase-hero> .showcase-container>p:not(.eyebrow),.section-head>p{color:#555861}
+.sample-note{border-color:#d9dee6;color:#555861}
+.showcase-tabs{background:#fff;border-color:#d9dee6}
+.tabs a{border-color:#d9dee6;color:#0b0b0f}.tabs a:hover{border-color:#0066cc;background:#eaf3ff;color:#0066cc}
+.showcase-section.tinted{background:#f6f8fb}
+.browser{border-color:#d9dee6;box-shadow:0 14px 35px rgba(0,0,0,.08)}
+.browser-bar{border-color:#edf0f3}
+.browser-bar i{background:#b8c1cc}.browser-bar i:first-child,.browser-bar i:nth-child(2){background:#0066cc}
+.northstar,.bayleaf,.atlas,.arabic,.brightpath{background:#fff}
+.northstar:after,.arabic-shape{background:#eaf3ff}
+.northstar .site-shape{border-color:#0066cc}
+.bayleaf:after{background:#eaf3ff}.plate{background:#0066cc}
+.site button,.arabic button{background:#0066cc}
+.blue-app,.learn-app,.finance-app,.health-app,.shop-app{background:#eaf3ff;color:#0b0b0f}
+.bar{background:#dce6f1}.bar i{background:#0066cc}
+.mini-bars i{background:#0066cc}.circle-progress{border-color:#dcecff;border-top-color:#0066cc;color:#0066cc}
+.flyer,.logo-card,.mini-brand-card,.digital-card{box-shadow:0 14px 30px rgba(0,0,0,.07)}
+.english-blue,.arabic-blue,.food,.arabic-event,.business{background:#fff;color:#0b0b0f}
+.english-blue h3,.arabic-blue h3,.food h3,.arabic-event h3,.business h3{color:#0066cc}
+.business{background:#0066cc;color:#fff}.business small,.business p,.business h3{color:#fff}
+.logo-nova,.logo-oro,.logo-kora,.logo-safi,.logo-pulse{background:#eaf3ff;color:#0066cc}
+.logo-nova i,.logo-oro i,.logo-kora i,.logo-safi i,.logo-pulse i{border-color:#0066cc;background:#0066cc}
+.social,.certificate,.invitation,.document{background:#fff;color:#0b0b0f}.social h3,.invitation h3{color:#0066cc}
+.social-alt{background:#0066cc;color:#fff}.social-alt h3,.social-alt p{color:#fff}
+.showcase-cta{background:#0066cc}.cta-button{color:#0066cc}
+.showcase-footer{background:#0b0b0f;border-color:#222}.showcase-footer .showcase-container,.showcase-footer a{color:#fff}
