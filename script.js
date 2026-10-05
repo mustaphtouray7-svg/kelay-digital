@@ -1,8 +1,8 @@
 "use strict";
 
 const CONTACT_DETAILS = {
-  email: "",
-  whatsappNumber: ""
+  email: "mustatoura7@gmail.com",
+  whatsappNumber: "589066"
 };
 
 const menuButton = document.querySelector(".menu-toggle");
