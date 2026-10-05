@@ -406,3 +406,11 @@ h1 span,h2 span,.blue-period{color:#0066cc}
 .footer-bottom a{color:#fff}
 .footer-bottom a span{color:#fff}
 .skip-link{background:#fff;color:#0b0b0f}
+
+.whatsapp-contact{display:flex;align-items:center;gap:14px;margin:0 0 24px;padding:15px 18px;border:1px solid rgba(255,255,255,.3);border-radius:12px;background:#fff;color:#0066cc;transition:transform .2s ease,box-shadow .2s ease}
+.whatsapp-contact:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,.12)}
+.whatsapp-logo{display:grid;place-items:center;width:46px;height:46px;flex:0 0 46px;border-radius:50%;background:#0066cc;color:#fff}
+.whatsapp-logo svg{width:28px;height:28px}
+.whatsapp-label{font-size:13px;font-weight:700;color:#0b0b0f}
+.whatsapp-contact strong{margin-left:auto;font-size:14px;color:#0066cc}
+@media(max-width:680px){.whatsapp-contact{padding:13px}.whatsapp-label{font-size:12px}}
