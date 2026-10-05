@@ -458,3 +458,32 @@ h1 span,h2 span,.blue-period{color:#0066cc}
   .service-big-button:nth-child(5){grid-column:auto;max-width:none}
   .service-big-button strong{font-size:16px}
 }
+
+
+/* Black background update */
+html { color-scheme: dark; }
+body { background:#000; color:#fff; }
+.hero,
+.services-section,
+.compact-services,
+.about-section,
+.approach-section,
+.closing-strip { background:#000; color:#fff; }
+.hero-description,
+.section-intro,
+.compact-services-heading>p:last-child,
+.about-copy>p:not(.eyebrow),
+.approach-grid p { color:#b8bec8; }
+h1,h2,h3,
+.text-link,
+.service-big-button strong { color:#fff; }
+.text-link:hover { color:#1685ff; }
+.hero-note,
+.hero-bottom { color:#b8bec8; }
+.section-heading,
+.compact-services-heading { color:#fff; }
+.approach-grid article { border-color:#333; }
+.closing-strip { border-color:#222; }
+.service-big-button { background:#fff; color:#0b0b0f; }
+.service-big-button strong { color:#0b0b0f; }
+.service-big-button small { color:#555861; }
