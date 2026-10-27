@@ -1,130 +1,129 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#102c52">
-  <meta name="description" content="A demonstration school website concept by Kelay Digital, designed to help schools share their story, academics, admissions and announcements.">
-  <title>Bright Path Academy | School Website Demo</title>
+  <meta name="theme-color" content="#5a3d2b">
+  <meta name="description" content="Alh. Lalo Kanteh Islamic Institute, Tabokoto, The Gambia. School information in English and Arabic.">
+  <title>Alh. Lalo Kanteh Islamic Institute | Tabokoto</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="script.js" defer></script>
 </head>
 <body>
-  <div class="demo-banner"><span class="demo-dot"></span> SCHOOL WEBSITE CONCEPT <span class="banner-divider">/</span> Demonstration content — replace with the school's details before launch</div>
+  <div class="demo-banner"><span class="demo-dot"></span><span data-i18n="demo">SCHOOL WEBSITE SAMPLE — PREVIEW VERSION</span><span class="banner-divider">/</span><span data-i18n="demoNote">Student portal is a visual prototype; it does not save information.</span></div>
   <header class="site-header">
     <div class="container nav-wrap">
-      <a class="brand" href="#home" aria-label="Bright Path Academy home">
-        <span class="brand-mark">B<span>+</span></span>
-        <span class="brand-copy"><strong>BRIGHT PATH</strong><small>ACADEMY</small></span>
+      <a class="brand" href="#home" aria-label="Institute home">
+        <span class="brand-mark">ل<span>ك</span></span>
+        <span class="brand-copy"><strong data-i18n="shortName">LALO KANTEH INSTITUTE</strong><small data-i18n="locationShort">TABOKOTO · THE GAMBIA</small></span>
       </a>
-      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span></span><span></span></button>
+      <div class="nav-tools">
+        <button class="language-toggle" id="language-toggle" type="button" aria-label="Switch to Arabic">العربية</button>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation"><span></span><span></span></button>
+      </div>
       <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
-        <a href="#about">Our School</a><a href="#academics">Academics</a><a href="#admissions">Admissions</a><a href="#news">News</a><a class="nav-cta" href="#contact">Contact Us <span>↗</span></a>
+        <a href="#about" data-i18n="navAbout">About</a>
+        <a href="#studies" data-i18n="navStudies">Islamic Studies</a>
+        <a href="#admissions" data-i18n="navAdmissions">Admissions</a>
+        <a href="#student-portal" data-i18n="navPortal">Student Portal</a>
+        <a class="nav-cta" href="#contact"><span data-i18n="navContact">Contact</span> <span>↗</span></a>
       </nav>
     </div>
   </header>
 
   <main id="home">
     <section class="hero">
-      <div class="hero-photo" role="img" aria-label="Students learning together in a bright classroom"></div>
-      <div class="hero-shade"></div>
+      <div class="hero-pattern"></div>
       <div class="container hero-inner">
-        <p class="eyebrow light-eyebrow"><span></span> LEARN · GROW · LEAD</p>
-        <h1>Every learner.<br><em>A brighter future.</em></h1>
-        <p class="hero-lead">A welcoming learning community where curiosity is encouraged, character is nurtured, and every step forward matters.</p>
-        <div class="hero-actions"><a class="button button-lime" href="#admissions">Explore Admissions <span>↗</span></a><a class="button button-glass" href="#about">Discover Our School</a></div>
-        <div class="hero-proof"><span class="proof-icon">✳</span><span><strong>A place to belong.</strong><small>A foundation for lifelong learning.</small></span></div>
+        <p class="eyebrow light-eyebrow"><span></span><span data-i18n="heroEyebrow">ISLAMIC LEARNING · KNOWLEDGE · CHARACTER</span></p>
+        <h1 data-i18n="heroTitle">ALH. LALO KANTEH<br>ISLAMIC INSTITUTE</h1>
+        <p class="arabic-hero" lang="ar" dir="rtl">معهد الحاج لالو كانتي الإسلامي بتبوكتو</p>
+        <p class="hero-lead" data-i18n="heroLead">A learning community dedicated to Islamic education, good character, and the pursuit of beneficial knowledge in Tabokoto, The Gambia.</p>
+        <div class="hero-actions"><a class="button button-sand" href="#studies"><span data-i18n="exploreStudies">Explore Islamic Studies</span> <span>↗</span></a><a class="button button-glass" href="#student-portal" data-i18n="openPortal">Student Portal</a></div>
+        <div class="hero-proof"><span class="proof-icon">✦</span><span><strong data-i18n="heroProof">Knowledge with purpose</strong><small data-i18n="heroProofSmall">Rooted in faith, learning, and respect.</small></span></div>
       </div>
-      <div class="hero-index"><span>01</span><span class="index-line"></span><span>WELCOME</span></div>
+      <div class="hero-index"><span>01</span><span class="index-line"></span><span data-i18n="welcome">WELCOME</span></div>
     </section>
 
     <section class="welcome section" id="about">
       <div class="container welcome-grid">
         <div class="welcome-copy">
-          <p class="eyebrow">WELCOME TO BRIGHT PATH</p>
-          <h2>More than a school.<br><span>A place to thrive.</span></h2>
-          <p class="lead">Education is about more than what happens in a classroom. It is about building confidence, discovering strengths, and preparing young people to contribute to their communities.</p>
-          <p>Our concept school brings learning, care, and ambition together in a supportive environment where students are encouraged to ask questions, work together, and do their best.</p>
-          <a class="text-link" href="#academics">Get to know our approach <span>↗</span></a>
+          <p class="eyebrow" data-i18n="aboutEyebrow">ABOUT THE INSTITUTE</p>
+          <h2 data-i18n="aboutTitle">A place to learn.<br><span>A foundation for life.</span></h2>
+          <p class="lead" data-i18n="aboutLead">Alh. Lalo Kanteh Islamic Institute is based in Tabokoto, The Gambia, and focuses on Islamic learning and the development of students' character.</p>
+          <p data-i18n="aboutText">This website sample is prepared for the institute. The school can add its approved history, leadership message, learning approach, and official photographs before launch.</p>
+          <a class="text-link" href="#contact"><span data-i18n="askSchool">Contact the institute</span> <span>↗</span></a>
         </div>
         <div class="welcome-visual">
-          <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1000&q=85" alt="Teacher supporting students in a classroom" loading="lazy">
-          <div class="visual-note"><span class="note-symbol">✳</span><span><strong>Learning with purpose</strong><small>Confidence, knowledge, and character.</small></span></div>
-          <div class="visual-number">01<span>/ OUR STORY</span></div>
+          <div class="calligraphy-card" aria-hidden="true"><span>بِسْمِ اللَّهِ</span><strong>طَلَبُ الْعِلْمِ</strong><small>SEEKING BENEFICIAL KNOWLEDGE</small><i>✦</i></div>
+          <div class="visual-note"><span class="note-symbol">✦</span><span><strong data-i18n="visualTitle">Faith and knowledge</strong><small data-i18n="visualSubtitle">Learning with purpose and good character.</small></span></div>
+          <div class="visual-number">01<span data-i18n="ourStory">/ OUR INSTITUTE</span></div>
         </div>
       </div>
     </section>
 
-    <section class="values-section section">
+    <section class="values-section section" id="studies">
       <div class="container">
-        <div class="section-heading centered"><p class="eyebrow">WHAT GUIDES US</p><h2>Strong foundations.<br><span>Meaningful possibilities.</span></h2><p>We believe great education helps every student find their strengths and build the confidence to use them.</p></div>
+        <div class="section-heading centered"><p class="eyebrow" data-i18n="studiesEyebrow">LEARNING AT THE INSTITUTE</p><h2 data-i18n="studiesTitle">Islamic knowledge.<br><span>Strong character.</span></h2><p data-i18n="studiesLead">The institute's focus is Islamic education. The subjects below are examples to confirm with the school before the website goes live.</p></div>
         <div class="value-grid">
-          <article class="value-card"><span class="value-icon blue-icon">✳</span><small>01 / LEARNING</small><h3>Curiosity first</h3><p>Encouraging questions, exploration, and a lifelong love of learning.</p></article>
-          <article class="value-card value-featured"><span class="value-icon lime-icon">↗</span><small>02 / CHARACTER</small><h3>Growing together</h3><p>Building respect, responsibility, teamwork, and care for others.</p></article>
-          <article class="value-card"><span class="value-icon peach-icon">✦</span><small>03 / POSSIBILITY</small><h3>Ready for tomorrow</h3><p>Helping learners develop skills and confidence for the next chapter.</p></article>
+          <article class="value-card"><span class="value-icon blue-icon">ق</span><small data-i18n="studyOneLabel">01 / QUR'AN</small><h3 data-i18n="studyOneTitle">Qur'an studies</h3><p data-i18n="studyOneText">A sample subject card for Qur'an learning and recitation, subject to confirmation.</p></article>
+          <article class="value-card value-featured"><span class="value-icon sand-icon">ع</span><small data-i18n="studyTwoLabel">02 / ISLAMIC STUDIES</small><h3 data-i18n="studyTwoTitle">Islamic knowledge</h3><p data-i18n="studyTwoText">A sample section for Islamic subjects taught at the institute, to be edited to match the real curriculum.</p></article>
+          <article class="value-card"><span class="value-icon peach-icon">أ</span><small data-i18n="studyThreeLabel">03 / ARABIC</small><h3 data-i18n="studyThreeTitle">Arabic language</h3><p data-i18n="studyThreeText">A sample subject card for Arabic language learning, pending confirmation by the school.</p></article>
         </div>
-      </div>
-    </section>
-
-    <section class="academics section" id="academics">
-      <div class="container academics-grid">
-        <div class="academics-copy"><p class="eyebrow">ACADEMIC LIFE</p><h2>Room to discover.<br><span>Support to succeed.</span></h2><p class="lead">A clear overview of learning programmes helps families understand the journey ahead.</p><p>This demonstration section can be tailored to the school's actual classes, subjects, curriculum, facilities, and co-curricular activities.</p><a class="text-link" href="#contact">Ask about our programmes <span>↗</span></a></div>
-        <div class="programme-list">
-          <article><span class="programme-icon">01</span><div><h3>Early Years</h3><p>A nurturing start built around exploration and foundational skills.</p></div><span class="programme-arrow">↗</span></article>
-          <article><span class="programme-icon">02</span><div><h3>Primary Education</h3><p>Building literacy, numeracy, creativity, and confidence.</p></div><span class="programme-arrow">↗</span></article>
-          <article><span class="programme-icon">03</span><div><h3>Secondary Education</h3><p>Developing deeper knowledge, independence, and future readiness.</p></div><span class="programme-arrow">↗</span></article>
-          <p class="demo-note">Illustrative programme labels — confirm actual levels with the school.</p>
-        </div>
+        <p class="demo-note" data-i18n="subjectNote">These subject cards are examples only. They are not a confirmed list of the institute's curriculum.</p>
       </div>
     </section>
 
     <section class="admissions section" id="admissions">
       <div class="container admissions-wrap">
-        <div class="admissions-copy"><p class="eyebrow light-eyebrow">TAKE THE NEXT STEP</p><h2>A new chapter<br>starts with a <em>hello.</em></h2><p>Make it easy for families to understand the admissions process, prepare the right documents, and contact the school with questions.</p><a class="button button-lime" href="#contact">Admissions Enquiry <span>↗</span></a></div>
+        <div class="admissions-copy"><p class="eyebrow light-eyebrow" data-i18n="admissionsEyebrow">JOIN OUR LEARNING COMMUNITY</p><h2 data-i18n="admissionsTitle">Begin your<br>learning journey.</h2><p data-i18n="admissionsText">Families can contact the institute to ask about admission, class levels, required documents, and the current school calendar.</p><a class="button button-sand" href="#contact"><span data-i18n="admissionsButton">Ask about admissions</span> <span>↗</span></a></div>
         <div class="admissions-steps">
-          <div><span>01</span><p><strong>Learn about the school</strong><small>Explore classes, values, and facilities.</small></p></div>
-          <div><span>02</span><p><strong>Review requirements</strong><small>See the school's current application guidance.</small></p></div>
-          <div><span>03</span><p><strong>Contact the admissions team</strong><small>Ask questions and learn about next steps.</small></p></div>
-          <p class="demo-note light-note">Admissions steps are examples and should be confirmed by each school.</p>
+          <div><span>01</span><p><strong data-i18n="stepOneTitle">Contact the institute</strong><small data-i18n="stepOneText">Ask about current admissions and class levels.</small></p></div>
+          <div><span>02</span><p><strong data-i18n="stepTwoTitle">Confirm requirements</strong><small data-i18n="stepTwoText">Check documents and any school-specific guidance.</small></p></div>
+          <div><span>03</span><p><strong data-i18n="stepThreeTitle">Speak with the school</strong><small data-i18n="stepThreeText">The school will explain the next steps.</small></p></div>
+          <p class="demo-note light-note" data-i18n="admissionsNote">Admissions guidance must be confirmed by the institute.</p>
         </div>
       </div>
     </section>
 
-    <section class="news section" id="news">
-      <div class="container">
-        <div class="section-heading news-heading"><div><p class="eyebrow">THE LATEST</p><h2>News from our<br><span>school community.</span></h2></div><p>Keep parents informed with a dedicated place for school announcements, important dates, and community highlights.</p></div>
-        <div class="news-grid">
-          <article class="news-card"><div class="news-art news-art-blue"><span>NOTICE BOARD</span><b>Clear news.<br>One trusted place.</b><i>✳</i></div><div class="news-meta"><span>ANNOUNCEMENTS</span><span>DEMO</span></div><h3>Important school updates</h3><p>Publish term dates, reminders, and notices in one easy-to-find location.</p></article>
-          <article class="news-card"><div class="news-art news-art-lime"><span>SCHOOL LIFE</span><b>Celebrate<br>every milestone.</b><i>✦</i></div><div class="news-meta"><span>COMMUNITY</span><span>DEMO</span></div><h3>Stories from school life</h3><p>Share student activities, achievements, events, and school-community moments.</p></article>
-          <article class="news-card"><div class="news-art news-art-peach"><span>KEY DATES</span><b>Plan ahead<br>with confidence.</b><i>↗</i></div><div class="news-meta"><span>CALENDAR</span><span>DEMO</span></div><h3>Dates families need to know</h3><p>Make important dates and upcoming activities easy for families to check.</p></article>
+    <section class="portal-section section" id="student-portal">
+      <div class="container portal-grid">
+        <div class="portal-intro">
+          <p class="eyebrow" data-i18n="portalEyebrow">STUDENT AREA</p>
+          <h2 data-i18n="portalTitle">Student portal<br><span>sample sign-up.</span></h2>
+          <p class="lead" data-i18n="portalLead">This preview shows the details a future student portal could request. The school must connect it to a secure system before real students use it.</p>
+          <div class="privacy-note"><span>🔒</span><p><strong data-i18n="privacyTitle">Demo privacy notice</strong><small data-i18n="privacyText">Do not enter a real password or private student details here. This form does not create an account or send or save information.</small></p></div>
         </div>
-        <p class="demo-note">These are sample content cards, not real school announcements.</p>
+        <form class="portal-form" id="student-form">
+          <p class="form-kicker" data-i18n="portalFormTitle">STUDENT REGISTRATION PREVIEW</p>
+          <div class="form-two">
+            <div><label for="student-fullname" data-i18n="fullNameLabel">Full name</label><input id="student-fullname" name="fullName" autocomplete="name" required data-i18n-placeholder="fullNamePlaceholder" placeholder="Enter your full name"></div>
+            <div><label for="student-surname" data-i18n="surnameLabel">Surname</label><input id="student-surname" name="surname" required data-i18n-placeholder="surnamePlaceholder" placeholder="Enter your surname"></div>
+          </div>
+          <label for="student-phone" data-i18n="phoneLabel">Phone number</label><input id="student-phone" name="phone" type="tel" autocomplete="tel" required data-i18n-placeholder="phonePlaceholder" placeholder="Enter phone number">
+          <label for="student-address" data-i18n="addressLabel">Address / area</label><input id="student-address" name="address" autocomplete="street-address" required data-i18n-placeholder="addressPlaceholder" placeholder="Enter your town or address">
+          <label for="student-password" data-i18n="passwordLabel">Create a password (demo only)</label><input id="student-password" name="password" type="password" minlength="8" autocomplete="new-password" required data-i18n-placeholder="passwordPlaceholder" placeholder="At least 8 characters">
+          <button class="button button-brown" type="submit"><span data-i18n="registerButton">Preview registration</span> <span>↗</span></button>
+          <p class="form-footnote" data-i18n="portalFootnote">Prototype only. Nothing is transmitted or stored; no account is created.</p>
+          <p class="form-status" id="student-status" role="status" aria-live="polite"></p>
+        </form>
       </div>
     </section>
 
     <section class="contact section" id="contact">
       <div class="container contact-grid">
-        <div><p class="eyebrow">LET'S TALK</p><h2>Every great journey<br>begins with a <span>conversation.</span></h2><p class="lead">This sample contact form shows how families could send an enquiry. The live version can be connected to the school's preferred email or messaging channel.</p><div class="contact-details"><span>✳</span><p><strong>Designed by Kelay Digital</strong><small>School website concepts made clear, useful, and welcoming.</small></p></div></div>
-        <form class="enquiry-form" id="enquiry-form">
-          <p class="form-kicker">SAMPLE ENQUIRY FORM</p>
-          <label for="parent-name">Your name</label><input id="parent-name" name="name" autocomplete="name" placeholder="Enter your name" required>
-          <label for="parent-email">Email address</label><input id="parent-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
-          <label for="enquiry-type">What is your enquiry about?</label><select id="enquiry-type" name="type"><option>Admissions</option><option>Academic programmes</option><option>School information</option><option>Other question</option></select>
-          <label for="parent-message">Message</label><textarea id="parent-message" name="message" rows="3" placeholder="How can the school help?" required></textarea>
-          <button class="button button-navy" type="submit">Preview Enquiry <span>↗</span></button>
-          <p class="form-footnote">Demo only: this form does not send or store information.</p>
-          <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
-        </form>
+        <div><p class="eyebrow" data-i18n="contactEyebrow">GET IN TOUCH</p><h2 data-i18n="contactTitle">Questions about<br><span>the institute?</span></h2><p class="lead" data-i18n="contactText">For official school information, please contact Alh. Lalo Kanteh Islamic Institute using the email address below.</p><div class="contact-details"><span>✉</span><p><strong data-i18n="emailLabel">Email the institute</strong><a href="mailto:Lalokanteh1998@gmail.com">Lalokanteh1998@gmail.com</a><small data-i18n="locationFull">Tabokoto, The Gambia</small></p></div></div>
+        <div class="contact-card"><span class="contact-card-mark">ل ك</span><p class="arabic-name" lang="ar" dir="rtl">معهد الحاج لالو كانتي الإسلامي بتبوكتو</p><h3>ALH. LALO KANTEH ISLAMIC INSTITUTE</h3><p data-i18n="contactCardText">Tabokoto, The Gambia</p><a class="button button-brown" href="mailto:Lalokanteh1998@gmail.com"><span data-i18n="sendEmail">Send an email</span> <span>↗</span></a></div>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container footer-main"><a class="brand footer-brand" href="#home"><span class="brand-mark">B<span>+</span></span><span class="brand-copy"><strong>BRIGHT PATH</strong><small>ACADEMY</small></span></a><p>A school website concept by <a href="https://kelay-digital.onrender.com/" target="_blank" rel="noopener">Kelay Digital</a>.</p><a class="back-top" href="#home">Back to top ↑</a></div>
-    <div class="container footer-bottom"><span>© <span id="year"></span> Bright Path Academy — sample concept</span><span>Designed for learning. Built for clarity.</span></div>
+    <div class="container footer-main"><a class="brand footer-brand" href="#home"><span class="brand-mark">ل<span>ك</span></span><span class="brand-copy"><strong data-i18n="shortName">LALO KANTEH INSTITUTE</strong><small data-i18n="locationShort">TABOKOTO · THE GAMBIA</small></span></a><p><span data-i18n="websiteBy">Website concept by</span> <a href="https://kelay-digital.onrender.com/" target="_blank" rel="noopener">Kelay Digital</a>.</p><a class="back-top" href="#home" data-i18n="backTop">Back to top ↑</a></div>
+    <div class="container footer-bottom"><span>© <span id="year"></span> <span data-i18n="footerName">Alh. Lalo Kanteh Islamic Institute</span></span><span data-i18n="footerTagline">A sample website prepared for school review.</span></div>
   </footer>
 </body>
 </html>
