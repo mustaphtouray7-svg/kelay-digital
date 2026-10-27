@@ -1,41 +1,36 @@
-# Kelay Digital — School Website Demo
+# Alh. Lalo Kanteh Islamic Institute — Website Sample
 
-A responsive, single-page school website concept stored separately from the Kelay Digital agency homepage.
+A bilingual (English/Arabic) static website concept for Alh. Lalo Kanteh Islamic Institute in Tabokoto, The Gambia.
 
-## Folder contents
+## Current sample features
 
-- \`index.html\` — page content and six main sections
-- \`styles.css\` — visual design, responsive layouts, accessibility states
-- \`script.js\` — mobile navigation, footer year, demo form notice
+- English and Arabic language switch with right-to-left Arabic layout
+- Institute name in both languages
+- Brown, white, and sand visual palette, reflecting the reported white-shirt and brown-trouser uniform
+- About, Islamic studies, admissions, student portal, and contact sections
+- Institute contact email: Lalokanteh1998@gmail.com
+- Responsive layout for phones and computers
 
-## Preview locally
+## Student portal preview — important limitation
 
-1. Download or clone the repository.
-2. Open the repository in VS Code.
-3. Open \`school-demo/index.html\` in a browser, or use the VS Code Live Server extension.
-4. Test the mobile menu, section links, form validation, and responsive layout.
+The student registration form displays fields for full name, surname, phone number, address, and password, as requested. It is **only a front-end preview**: it does not create accounts, transmit data, or store information. Do not enter real student data or passwords on this public sample.
 
-## Publish on the existing Render Static Site
+Before real students use a portal, the institute needs a secure backend with proper authentication, encrypted transport, access controls, password hashing, data minimisation, backups, and a privacy notice approved by the school. Since students may be minors, the institute should establish appropriate guardian/consent and data-protection procedures before collecting their details.
 
-The existing Kelay Digital Render site publishes the repository root. Once this branch is merged into \`main\`, the new folder should be published alongside the existing files.
+## Content requiring school confirmation
 
-1. Open the existing Render Static Site for Kelay Digital.
-2. Confirm its repository is \`mustaphtouray7-svg/kelay-digital\`, branch is \`main\`, and publish directory is the repository root (usually \`.\`).
-3. Merge the reviewed school demo changes into \`main\`.
-4. Wait for Render's automatic deploy to finish.
-5. Open: \`https://kelay-digital.onrender.com/school-demo/\`
+- The institute's official name spelling and Arabic wording
+- Actual subjects, class levels, curriculum, and admission process
+- School history, management message, timetable, fees, and notices
+- Approved school logo and real school photographs
+- Phone number and any other public contact details
 
-Do not change the existing service's publish directory to \`school-demo\`, because that would replace the root site with the demo folder.
+The listed subjects are examples, not a verified curriculum. The sample should be reviewed by the institute before being presented as its official website.
 
-## Before adapting this template for a real school
+## Preview
 
-- Replace the fictional school name, text, classes, dates, and imagery with approved information.
-- Confirm the school's admissions process, contact details, and announcements.
-- Connect the enquiry form to an approved backend, email service, or messaging channel. The current form is a non-submitting demo.
-- Add the school's privacy notice and obtain consent before collecting information, especially children's information.
-- Confirm image licences and permissions.
-- Configure a domain only after the school approves ownership and renewal arrangements.
+After changes are merged into the `main` branch and Render finishes deploying, visit:
 
-## Budget
+https://kelay-digital.onrender.com/school-demo/
 
-This demo uses static HTML/CSS/JavaScript and can be previewed with free tools. Internet/data and optional domain registration are the main likely early costs. External Google Fonts and Unsplash images require internet access; replace external assets with approved local assets for a production handover if preferred.
+The existing Kelay Digital homepage remains at https://kelay-digital.onrender.com/.
