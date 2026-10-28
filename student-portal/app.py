@@ -307,7 +307,7 @@ PAGE = r'''<!doctype html>
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--dark);font-family:Arial,Helvetica,sans-serif;line-height:1.5}
 header{background:#fff;border-bottom:1px solid var(--line);padding:16px 5%;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{font-weight:800;color:var(--brown);text-decoration:none;letter-spacing:.02em}.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:.1em}
-main{max-width:1100px;margin:0 auto;padding:36px 18px 60px}.hero{background:var(--brown);color:white;border-radius:22px;padding:clamp(24px,5vw,52px);margin-bottom:24px}
+main{max-width:1100px;margin:0 auto;padding:36px 18px 60px}.hero{background:linear-gradient(90deg,rgba(54,35,23,.82),rgba(54,35,23,.42)),url('https://i.ibb.co/vCJ0SBKH/IMG-20260924-WA0131.jpg') center/cover no-repeat;background-color:var(--brown);color:white;border-radius:22px;padding:clamp(24px,5vw,52px);margin-bottom:24px;min-height:250px;display:flex;flex-direction:column;justify-content:center}
 .eyebrow{font-size:12px;letter-spacing:.16em;font-weight:700;color:#e8d5bd}.hero h1{font-size:clamp(28px,5vw,44px);line-height:1.12;margin:12px 0}.hero p{max-width:650px;color:#f4e9dd}
 .layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 8px 28px #5a3d2b0b}
 h2{margin:0 0 8px;font-size:23px}h3{margin:0 0 12px}label{display:block;font-weight:700;font-size:13px;margin:12px 0 5px}
