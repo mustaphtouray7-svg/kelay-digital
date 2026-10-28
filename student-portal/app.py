@@ -97,6 +97,15 @@ def health():
     except Exception:
         return jsonify({"status": "database_not_ready"}), 503
 
+@app.get("/api/setup-status")
+def setup_status():
+    try:
+        with db() as conn:
+            exists = conn.execute("SELECT id FROM portal_users WHERE role='admin' LIMIT 1").fetchone()
+        return jsonify({"setup_needed": not bool(exists)})
+    except Exception:
+        return jsonify({"setup_needed": True, "database_ready": False})
+
 @app.get("/api/csrf")
 def csrf():
     if not app.secret_key:
@@ -286,7 +295,7 @@ async function loadCsrf(){const r=await fetch("/api/csrf");const d=await r.json(
 function renderProfile(u){$("welcome").textContent="Welcome, "+u.full_name;$("profile").innerHTML='<p><strong>Email:</strong> '+esc(u.email)+'</p><p><strong>Student ID:</strong> '+esc(u.student_id||"Not assigned")+'</p><p><strong>Class:</strong> '+esc(u.class_name||"Not assigned")+'</p><p><strong>Account status:</strong> <span class="pill">'+esc(u.status)+'</span></p><p class="muted">Exam results and attendance can be added when the school provides verified records.</p>';}
 async function refreshStudents(){const d=await api("/api/admin/students",null,"GET");const list=$("studentList");if(!d.students.length){list.textContent="No student accounts yet.";return;}list.innerHTML=d.students.map(s=>'<div class="student"><div><strong>'+esc(s.full_name)+'</strong><div class="tiny">'+esc(s.email)+' · '+esc(s.student_id||"No student ID")+' · '+esc(s.class_name||"No class")+'</div><span class="pill">'+esc(s.status)+'</span></div><div>'+ (s.status!=="approved"?'<button data-id="'+s.id+'" data-status="approved">Approve</button> ':"")+(s.status!=="rejected"?'<button class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></div>').join("");list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));}
 async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin)await refreshStudents();}
-async function boot(){try{await loadCsrf();const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else{toggle("auth",true);}}catch(e){toggle("auth",true);showNotice("Portal setup is not complete yet. Please contact the website administrator. "+e.message,"error");}}
+async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();if(sd.setup_needed){toggle("setup",true);}const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else{toggle("auth",true);}}catch(e){toggle("auth",true);showNotice("Portal setup is not complete yet. Please contact the website administrator. "+e.message,"error");}}
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/login",{email:$("loginEmail").value,password:$("loginPassword").value});await showUser(d.user);showNotice("Signed in successfully.","success");}catch(err){showNotice(err.message,"error");}});
 $("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/register",{full_name:$("regName").value,email:$("regEmail").value,student_id:$("regStudentId").value,password:$("regPassword").value});e.target.reset();showNotice(d.message,"success");}catch(err){showNotice(err.message,"error");}});
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{});location.reload();}catch(e){showNotice(e.message,"error");}});
