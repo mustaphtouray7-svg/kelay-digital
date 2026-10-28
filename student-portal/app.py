@@ -305,7 +305,7 @@ PAGE = r'''<!doctype html>
 <style>
 :root{--brown:#5a3d2b;--dark:#2f2119;--sand:#f3e8d7;--paper:#fffdf9;--line:#e7d8c5;--muted:#766b60}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--dark);font-family:Arial,Helvetica,sans-serif;line-height:1.5}
-header{background:#fff;border-bottom:1px solid var(--line);padding:16px 5%;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header{background:#fff;border-bottom:1px solid var(--line);padding:16px 5%;display:flex;align-items:center;justify-content:space-between;gap:12px}.header-actions{display:flex;align-items:center;gap:12px}.language-toggle{margin:0;white-space:nowrap}
 .brand{font-weight:800;color:var(--brown);text-decoration:none;letter-spacing:.02em}.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:.1em}
 main{max-width:1100px;margin:0 auto;padding:36px 18px 60px}.hero{background:linear-gradient(90deg,rgba(54,35,23,.82),rgba(54,35,23,.42)),url('https://i.ibb.co/vCJ0SBKH/IMG-20260924-WA0131.jpg') center/cover no-repeat;background-color:var(--brown);color:white;border-radius:22px;padding:clamp(24px,5vw,52px);margin-bottom:24px;min-height:250px;display:flex;flex-direction:column;justify-content:center}
 .eyebrow{font-size:12px;letter-spacing:.16em;font-weight:700;color:#e8d5bd}.hero h1{font-size:clamp(28px,5vw,44px);line-height:1.12;margin:12px 0}.hero p{max-width:650px;color:#f4e9dd}
@@ -317,7 +317,7 @@ button.secondary{background:var(--sand);color:var(--brown)}button:disabled{opaci
 .pill{font-size:12px;font-weight:700;background:var(--sand);color:var(--brown);padding:4px 8px;border-radius:999px}.tiny{font-size:12px;color:var(--muted)}
 footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid var(--line)}a{color:var(--brown)}
 </style></head><body>
-<header><a class="brand" href="/">ALH. LALO KANTEH ISLAMIC INSTITUTE<small>TABOKOTO · THE GAMBIA</small></a><a href="https://kelay-digital.onrender.com/school-demo/" class="tiny">School website ↗</a></header>
+<header><a class="brand" href="/">ALH. LALO KANTEH ISLAMIC INSTITUTE<small>TABOKOTO · THE GAMBIA</small></a><div class="header-actions"><a href="https://kelay-digital.onrender.com/school-demo/" class="tiny" data-i18n="School website ↗">School website ↗</a><button type="button" id="languageToggle" class="secondary language-toggle" aria-label="Switch language">العربية</button></div></header>
 <main><section class="hero"><div class="eyebrow">STUDENT AREA</div><h1>Student Portal</h1><p>Access your student account, or request registration. Student accounts created by self-registration must be approved by the school.</p></section>
 <div id="notice" class="notice hidden" role="status"></div>
 <section id="auth" class="layout">
@@ -334,6 +334,55 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 <script>
 let csrf = "";
 const $ = id => document.getElementById(id);
+let currentLanguage = localStorage.getItem("studentPortalLanguage") || "en";
+const originalText = new WeakMap();
+const translations = {
+"School website ↗":"موقع المدرسة ↗","STUDENT AREA":"منطقة الطلاب","Student Portal":"بوابة الطلاب",
+"Access your student account, or request registration. Student accounts created by self-registration must be approved by the school.":"ادخل إلى حسابك الطلابي أو اطلب التسجيل. يجب أن توافق المدرسة على حسابات الطلاب التي يتم إنشاؤها بالتسجيل الذاتي.",
+"Sign in":"تسجيل الدخول","Use your approved school account.":"استخدم حسابك المدرسي المعتمد.","Phone number or administrator email":"رقم الهاتف أو البريد الإلكتروني للإدارة","Password":"كلمة المرور",
+"Student registration":"تسجيل الطلاب","Register using your school details. The school must approve your account before you can sign in.":"سجّل باستخدام بياناتك المدرسية. يجب أن توافق المدرسة على حسابك قبل تسجيل الدخول.",
+"First name":"الاسم الأول","Father's name":"اسم الأب","Father name":"اسم الأب","Surname":"اسم العائلة","Date of birth":"تاريخ الميلاد","Current class":"الفصل الحالي","Phone number":"رقم الهاتف","Profile picture (required)":"الصورة الشخصية (مطلوبة)","JPEG or PNG, up to 5 MB before automatic resizing.":"صورة JPEG أو PNG، حتى 5 ميغابايت قبل تغيير الحجم تلقائيًا.",
+"Create password (12 characters minimum)":"إنشاء كلمة مرور (12 حرفًا على الأقل)","Confirm password":"تأكيد كلمة المرور","Submit registration":"إرسال طلب التسجيل",
+"YOUR ACCOUNT":"حسابك","Welcome":"مرحبًا","Sign out":"تسجيل الخروج","Pending and approved students":"الطلاب قيد الانتظار والطلاب المعتمدون",
+"Approve self-registrations or reject accounts. Only approved students can sign in.":"وافق على طلبات التسجيل الذاتي أو ارفض الحسابات. يمكن للطلاب المعتمدين فقط تسجيل الدخول.",
+"Loading student records…":"جارٍ تحميل سجلات الطلاب…","Create a student account":"إنشاء حساب طالب","Full name in Arabic":"الاسم الكامل باللغة العربية","Email":"البريد الإلكتروني","Student ID":"رقم الطالب","Class":"الفصل","Grade":"الصف الدراسي","Temporary password (12 characters minimum)":"كلمة مرور مؤقتة (12 حرفًا على الأقل)","Create approved account":"إنشاء حساب معتمد",
+"Alh. Lalo Kanteh Islamic Institute · Tabokoto, The Gambia":"معهد الحاج لالو كانتي الإسلامي · تبوكتو، غامبيا",
+"Not assigned":"غير محدد","Account status:":"حالة الحساب:","Exam results and attendance can be added when the school provides verified records.":"يمكن إضافة نتائج الامتحانات والحضور عندما توفر المدرسة سجلات موثقة.",
+"No student accounts yet.":"لا توجد حسابات طلاب حتى الآن.","No photo":"لا توجد صورة","No student ID":"لا يوجد رقم طالب","No class":"لا يوجد فصل","Approve":"اعتماد","Reject":"رفض",
+"Sign in successfully.":"تم تسجيل الدخول بنجاح.","Student status updated.":"تم تحديث حالة الطالب.","Student account created and approved.":"تم إنشاء حساب الطالب واعتماده.",
+"Passwords do not match.":"كلمتا المرور غير متطابقتين.","Choose a JPEG or PNG profile picture.":"اختر صورة شخصية بصيغة JPEG أو PNG.","Choose a picture smaller than 5 MB.":"اختر صورة أصغر من 5 ميغابايت.","Could not read that picture.":"تعذرت قراءة الصورة.","That picture could not be opened.":"تعذر فتح الصورة.",
+"Please sign in.":"يرجى تسجيل الدخول.","Phone number or password is incorrect.":"رقم الهاتف أو كلمة المرور غير صحيحة.","Student registration is not open yet. Please contact the school.":"لم يُفتح تسجيل الطلاب بعد. يرجى التواصل مع المدرسة.","Refresh the page and try again.":"حدّث الصفحة وحاول مرة أخرى.","Unexpected server response.":"استجابة غير متوقعة من الخادم.","Request failed.":"فشل الطلب.","Portal is not configured yet.":"لم يتم إعداد البوابة بعد.","Portal setup is not complete yet. Please contact the website administrator. ":"لم يكتمل إعداد البوابة بعد. يرجى التواصل مع مسؤول الموقع. ",
+"Registration submitted. The school must approve your account before you can sign in.":"تم إرسال طلب التسجيل. يجب أن توافق المدرسة على حسابك قبل تسجيل الدخول."
+};
+function applyLanguage(){
+  const ar=currentLanguage==="ar";
+  document.documentElement.lang=ar?"ar":"en";
+  document.documentElement.dir=ar?"rtl":"ltr";
+  document.body.dir=ar?"rtl":"ltr";
+  document.querySelectorAll("body *").forEach(el=>{
+    if(el.children.length===0 && el.childNodes.length){
+      el.childNodes.forEach(node=>{
+        if(node.nodeType===Node.TEXT_NODE && node.textContent.trim()){
+          if(!originalText.has(node)) originalText.set(node,node.textContent);
+          const source=originalText.get(node), trimmed=source.trim();
+          const translated=ar?(translations[trimmed]||trimmed):trimmed;
+          node.textContent=source.replace(trimmed,translated);
+        }
+      });
+    }
+  });
+  document.querySelectorAll("input").forEach(el=>{
+    const label=document.querySelector('label[for="'+el.id+'"]');
+    if(label && translations[label.textContent.trim()]) el.setAttribute("aria-label",translations[label.textContent.trim()]);
+  });
+  $("languageToggle").textContent=ar?"English":"العربية";
+  $("languageToggle").setAttribute("aria-label",ar?"Switch to English":"التبديل إلى الإنجليزية");
+}
+$("languageToggle").addEventListener("click",()=>{
+  currentLanguage=currentLanguage==="en"?"ar":"en";
+  localStorage.setItem("studentPortalLanguage",currentLanguage);
+  applyLanguage();
+});
 function showNotice(message, kind="notice"){const n=$("notice");n.textContent=message;n.className=kind;}
 async function api(path, data, method="POST"){const res=await fetch(path,{method,headers:{"Content-Type":"application/json","X-CSRF-Token":csrf},body:method==="GET"?undefined:JSON.stringify(data||{})});const body=await res.json().catch(()=>({error:"Unexpected server response."}));if(body.csrf_token)csrf=body.csrf_token;if(!res.ok)throw new Error(body.error||"Request failed.");return body;}
 function toggle(id,on){$(id).classList.toggle("hidden",!on);}
@@ -350,6 +399,7 @@ $("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{con
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{});location.reload();}catch(e){showNotice(e.message,"error");}});
 $("createStudent").addEventListener("submit",async e=>{e.preventDefault();try{await api("/api/admin/create-student",{full_name:$("newName").value,father_name:$("newFather").value,surname:$("newSurname").value,arabic_name:$("newArabic").value,phone:$("newPhone").value,email:$("newEmail").value,student_id:$("newId").value,class_name:$("newClass").value,grade:$("newGrade").value,password:$("newPassword").value});e.target.reset();showNotice("Student account created and approved.","success");await refreshStudents();}catch(err){showNotice(err.message,"error");}});
 boot();
+applyLanguage();
 </script></body></html>'''
 
 @app.get("/")
