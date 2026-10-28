@@ -20,6 +20,7 @@ app.config.update(
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 SCHOOL_NAME = "Alh. Lalo Kanteh Islamic Institute"
 SETUP_KEY = os.environ.get("PORTAL_SETUP_KEY", "")
+REGISTRATION_OPEN = os.environ.get("STUDENT_REGISTRATION_OPEN", "false").lower() == "true"
 
 def db():
     if not DATABASE_URL:
@@ -32,18 +33,28 @@ def init_db():
             CREATE TABLE IF NOT EXISTS portal_users (
                 id BIGSERIAL PRIMARY KEY,
                 full_name VARCHAR(120) NOT NULL,
+                father_name VARCHAR(120) NOT NULL DEFAULT '',
+                surname VARCHAR(120) NOT NULL DEFAULT '',
+                arabic_name VARCHAR(200) NOT NULL DEFAULT '',
+                phone VARCHAR(40) NOT NULL DEFAULT '',
                 email VARCHAR(254) NOT NULL UNIQUE,
                 student_id VARCHAR(40) UNIQUE,
                 password_hash TEXT NOT NULL,
                 role VARCHAR(16) NOT NULL DEFAULT 'student' CHECK (role IN ('student','admin')),
                 status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
                 class_name VARCHAR(80) NOT NULL DEFAULT '',
+                grade VARCHAR(80) NOT NULL DEFAULT '',
                 profile_image TEXT NOT NULL DEFAULT '',
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 approved_at TIMESTAMPTZ
             )
         """)
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS profile_image TEXT NOT NULL DEFAULT ''")
+        conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS father_name VARCHAR(120) NOT NULL DEFAULT ''")
+        conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS surname VARCHAR(120) NOT NULL DEFAULT ''")
+        conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS arabic_name VARCHAR(200) NOT NULL DEFAULT ''")
+        conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS phone VARCHAR(40) NOT NULL DEFAULT ''")
+        conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS grade VARCHAR(80) NOT NULL DEFAULT ''")
         conn.execute("CREATE INDEX IF NOT EXISTS portal_users_status_idx ON portal_users(status)")
         conn.commit()
 
@@ -88,7 +99,7 @@ def admin_required(fn):
     return wrapped
 
 def user_public(row):
-    return {k: row.get(k) for k in ("id", "full_name", "email", "student_id", "role", "status", "class_name", "profile_image", "created_at")}
+    return {k: row.get(k) for k in ("id", "full_name", "father_name", "surname", "arabic_name", "phone", "email", "student_id", "role", "status", "class_name", "grade", "profile_image", "created_at")}
 
 @app.get("/health")
 def health():
@@ -149,6 +160,8 @@ def valid_profile_image(value):
 
 @app.post("/api/register")
 def register():
+    if not REGISTRATION_OPEN:
+        return jsonify({"error": "Student registration is not open yet. Please contact the school."}), 403
     if not verify_csrf():
         return jsonify({"error": "Refresh the page and try again."}), 400
     data = request.json or {}
@@ -224,19 +237,24 @@ def create_student():
         return jsonify({"error": "Refresh the page and try again."}), 400
     data = request.json or {}
     name = str(data.get("full_name", "")).strip()
+    father_name = str(data.get("father_name", "")).strip()
+    surname = str(data.get("surname", "")).strip()
+    arabic_name = str(data.get("arabic_name", "")).strip()
+    phone = str(data.get("phone", "")).strip()
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", ""))
     student_id = str(data.get("student_id", "")).strip() or None
     class_name = str(data.get("class_name", "")).strip()
-    if len(name) < 2 or "@" not in email:
+    grade = str(data.get("grade", "")).strip()
+    if len(name) < 2 or not father_name or not surname or not arabic_name or not phone or not class_name or not grade or "@" not in email:
         return jsonify({"error": "Enter a full name and valid email."}), 400
     if len(password) < 12:
         return jsonify({"error": "Temporary password must be at least 12 characters."}), 400
     try:
         with db() as conn:
             row = conn.execute(
-                "INSERT INTO portal_users(full_name,email,student_id,password_hash,status,class_name,approved_at) VALUES (%s,%s,%s,%s,'approved',%s,NOW()) RETURNING *",
-                (name, email, student_id, generate_password_hash(password), class_name)
+                "INSERT INTO portal_users(full_name,father_name,surname,arabic_name,phone,email,student_id,password_hash,status,class_name,grade,approved_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'approved',%s,%s,NOW()) RETURNING *",
+                (name, father_name, surname, arabic_name, phone, email, student_id, generate_password_hash(password), class_name, grade)
             ).fetchone()
             conn.commit()
         return jsonify({"student": user_public(row)}), 201
@@ -285,13 +303,12 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 <section id="auth" class="layout">
 <div class="card"><h2>Sign in</h2><p class="muted">Use your approved school account.</p>
 <form id="loginForm"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" required maxlength="254"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form></div>
-<div class="card"><h2>Request an account</h2><p class="muted">The school must approve your registration before you can sign in.</p>
-<form id="registerForm"><label for="regName">Full name</label><input id="regName" required maxlength="120"><label for="regEmail">Email</label><input id="regEmail" type="email" required maxlength="254"><label for="regStudentId">Student ID (if known)</label><input id="regStudentId" maxlength="40"><label for="regPhoto">Profile picture (required)</label><input id="regPhoto" type="file" accept="image/jpeg,image/png" required><p class="tiny">JPEG or PNG, up to 5 MB before automatic resizing.</p><img id="photoPreview" class="hidden" alt="Profile picture preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--line)"><label for="regPassword">Password (12 characters minimum)</label><input id="regPassword" type="password" minlength="12" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
+<div class="card"><h2>Student registration</h2><div class="notice">Student registration is currently closed. The school will announce when registration opens. Existing students should wait for the school administrator to create or approve their account.</div><form id="registerForm" class="hidden"><label for="regName">First name</label><input id="regName" required maxlength="120"><label for="regFather">Father name</label><input id="regFather" required maxlength="120"><label for="regSurname">Surname</label><input id="regSurname" required maxlength="120"><label for="regArabic">Full name in Arabic</label><input id="regArabic" required maxlength="200" dir="rtl"><label for="regPhone">Phone number</label><input id="regPhone" type="tel" required maxlength="40"><label for="regClass">Class</label><input id="regClass" required maxlength="80"><label for="regGrade">Grade</label><input id="regGrade" required maxlength="80"><label for="regEmail">Email</label><input id="regEmail" type="email" required maxlength="254"><label for="regStudentId">Student ID (if known)</label><input id="regStudentId" maxlength="40"><label for="regPhoto">Profile picture (required)</label><input id="regPhoto" type="file" accept="image/jpeg,image/png" required><p class="tiny">JPEG or PNG, up to 5 MB before automatic resizing.</p><img id="photoPreview" class="hidden" alt="Profile picture preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--line)"><label for="regPassword">Create password (12 characters minimum)</label><input id="regPassword" type="password" minlength="12" autocomplete="new-password" required><label for="regPasswordConfirm">Confirm password</label><input id="regPasswordConfirm" type="password" minlength="12" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
 </section>
 <section id="dashboard" class="hidden"><div class="card"><div class="bar"><div><p class="eyebrow" style="color:var(--brown)">YOUR ACCOUNT</p><h2 id="welcome">Welcome</h2></div><button class="secondary" id="logout">Sign out</button></div><div id="profile"></div></div>
 <div id="adminPanel" class="hidden">
 <div class="card" style="margin-top:18px"><h2>Pending and approved students</h2><p class="muted">Approve self-registrations or reject accounts. Only approved students can sign in.</p><div id="studentList">Loading student records…</div></div>
-<div class="card" style="margin-top:18px"><h2>Create a student account</h2><form id="createStudent"><label for="newName">Full name</label><input id="newName" required maxlength="120"><label for="newEmail">Email</label><input id="newEmail" type="email" required maxlength="254"><label for="newId">Student ID</label><input id="newId" maxlength="40"><label for="newClass">Class</label><input id="newClass" maxlength="80"><label for="newPassword">Temporary password (12 characters minimum)</label><input id="newPassword" type="password" minlength="12" required><button type="submit">Create approved account</button></form></div></div>
+<div class="card" style="margin-top:18px"><h2>Create a student account</h2><form id="createStudent"><label for="newName">First name</label><input id="newName" required maxlength="120"><label for="newFather">Father name</label><input id="newFather" required maxlength="120"><label for="newSurname">Surname</label><input id="newSurname" required maxlength="120"><label for="newArabic">Full name in Arabic</label><input id="newArabic" required maxlength="200" dir="rtl"><label for="newPhone">Phone number</label><input id="newPhone" type="tel" required maxlength="40"><label for="newEmail">Email</label><input id="newEmail" type="email" required maxlength="254"><label for="newId">Student ID</label><input id="newId" maxlength="40"><label for="newClass">Class</label><input id="newClass" required maxlength="80"><label for="newGrade">Grade</label><input id="newGrade" required maxlength="80"><label for="newPassword">Temporary password (12 characters minimum)</label><input id="newPassword" type="password" minlength="12" required><button type="submit">Create approved account</button></form></div></div>
 </section>
 <section id="setup" class="card hidden" style="margin-top:18px"><h2>First-time administrator setup</h2><p class="muted">Use the one-time setup key provided by the school website administrator. Create a strong password and keep it private.</p>
 <form id="setupForm"><label for="setupKey">Setup key</label><input id="setupKey" type="password" required autocomplete="off"><label for="adminName">Administrator full name</label><input id="adminName" required maxlength="120"><label for="adminEmail">Administrator email</label><input id="adminEmail" type="email" required maxlength="254"><label for="adminPassword">Password (12 characters minimum)</label><input id="adminPassword" type="password" minlength="12" required autocomplete="new-password"><button type="submit">Create administrator account</button></form></section>
@@ -307,13 +324,13 @@ async function loadCsrf(){const r=await fetch("/api/csrf");const d=await r.json(
 async function imageToDataUrl(file){if(!file||!["image/jpeg","image/png"].includes(file.type))throw new Error("Choose a JPEG or PNG profile picture.");if(file.size>5*1024*1024)throw new Error("Choose a picture smaller than 5 MB.");const src=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Could not read that picture."));r.readAsDataURL(file);});const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error("That picture could not be opened."));i.src=src;});const scale=Math.min(1,320/Math.max(img.width,img.height));const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);return canvas.toDataURL("image/jpeg",0.68);}
 $("regPhoto").addEventListener("change",async()=>{try{if($("regPhoto").files[0]){$("photoPreview").src=await imageToDataUrl($("regPhoto").files[0]);toggle("photoPreview",true);}}catch(e){toggle("photoPreview",false);showNotice(e.message,"error");}});
 function renderProfile(u){$("welcome").textContent="Welcome, "+u.full_name;$("profile").innerHTML=(u.profile_image?'<img src="'+u.profile_image+'" alt="Student profile picture" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--line)">':"")+'<p><strong>Email:</strong> '+esc(u.email)+'</p><p><strong>Student ID:</strong> '+esc(u.student_id||"Not assigned")+'</p><p><strong>Class:</strong> '+esc(u.class_name||"Not assigned")+'</p><p><strong>Account status:</strong> <span class="pill">'+esc(u.status)+'</span></p><p class="muted">Exam results and attendance can be added when the school provides verified records.</p>';}
-async function refreshStudents(){const d=await api("/api/admin/students",null,"GET");const list=$("studentList");if(!d.students.length){list.textContent="No student accounts yet.";return;}list.innerHTML=d.students.map(s=>'<div class="student"><div>'+(s.profile_image?'<img src="'+s.profile_image+'" alt="Student profile" style="width:58px;height:58px;object-fit:cover;border-radius:50%;vertical-align:middle;margin-right:10px">':'<span class="pill">No photo</span>')+'<strong>'+esc(s.full_name)+'</strong><div class="tiny">'+esc(s.email)+' · '+esc(s.student_id||"No student ID")+' · '+esc(s.class_name||"No class")+'</div><span class="pill">'+esc(s.status)+'</span></div><div>'+ (s.status!=="approved"?'<button data-id="'+s.id+'" data-status="approved">Approve</button> ':"")+(s.status!=="rejected"?'<button class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></div>').join("");list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));}
+async function refreshStudents(){const d=await api("/api/admin/students",null,"GET");const list=$("studentList");if(!d.students.length){list.textContent="No student accounts yet.";return;}list.innerHTML=d.students.map(s=>'<div class="student"><div>'+(s.profile_image?'<img src="'+s.profile_image+'" alt="Student profile" style="width:58px;height:58px;object-fit:cover;border-radius:50%;vertical-align:middle;margin-right:10px">':'<span class="pill">No photo</span>')+'<strong>'+esc(s.full_name)+'</strong><div class="tiny">'+esc(s.father_name)+' '+esc(s.surname)+' · '+esc(s.arabic_name)+' · '+esc(s.phone)+' · '+esc(s.grade)+' · '+esc(s.email)+' · '+esc(s.student_id||"No student ID")+' · '+esc(s.class_name||"No class")+'</div><span class="pill">'+esc(s.status)+'</span></div><div>'+ (s.status!=="approved"?'<button data-id="'+s.id+'" data-status="approved">Approve</button> ':"")+(s.status!=="rejected"?'<button class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></div>').join("");list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));}
 async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin)await refreshStudents();}
 async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();if(sd.setup_needed){toggle("setup",true);}const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else{toggle("auth",true);}}catch(e){toggle("auth",true);showNotice("Portal setup is not complete yet. Please contact the website administrator. "+e.message,"error");}}
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/login",{email:$("loginEmail").value,password:$("loginPassword").value});await showUser(d.user);showNotice("Signed in successfully.","success");}catch(err){showNotice(err.message,"error");}});
-$("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const photo=await imageToDataUrl($("regPhoto").files[0]);const d=await api("/api/register",{full_name:$("regName").value,email:$("regEmail").value,student_id:$("regStudentId").value,password:$("regPassword").value,profile_image:photo});e.target.reset();toggle("photoPreview",false);showNotice(d.message,"success");}catch(err){showNotice(err.message,"error");}});
+$("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const photo=await imageToDataUrl($("regPhoto").files[0]);const d=await api("/api/register",{full_name:$("regName").value,email:$("regEmail").value,student_id:$("regStudentId").value,father_name:$("regFather").value,surname:$("regSurname").value,arabic_name:$("regArabic").value,phone:$("regPhone").value,class_name:$("regClass").value,grade:$("regGrade").value,password:$("regPassword").value,password_confirm:$("regPasswordConfirm").value,profile_image:photo});e.target.reset();toggle("photoPreview",false);showNotice(d.message,"success");}catch(err){showNotice(err.message,"error");}});
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{});location.reload();}catch(e){showNotice(e.message,"error");}});
-$("createStudent").addEventListener("submit",async e=>{e.preventDefault();try{await api("/api/admin/create-student",{full_name:$("newName").value,email:$("newEmail").value,student_id:$("newId").value,class_name:$("newClass").value,password:$("newPassword").value});e.target.reset();showNotice("Student account created and approved.","success");await refreshStudents();}catch(err){showNotice(err.message,"error");}});
+$("createStudent").addEventListener("submit",async e=>{e.preventDefault();try{await api("/api/admin/create-student",{full_name:$("newName").value,father_name:$("newFather").value,surname:$("newSurname").value,arabic_name:$("newArabic").value,phone:$("newPhone").value,email:$("newEmail").value,student_id:$("newId").value,class_name:$("newClass").value,grade:$("newGrade").value,password:$("newPassword").value});e.target.reset();showNotice("Student account created and approved.","success");await refreshStudents();}catch(err){showNotice(err.message,"error");}});
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/setup-admin",{setup_key:$("setupKey").value,full_name:$("adminName").value,email:$("adminEmail").value,password:$("adminPassword").value});await showUser(d.user);showNotice("Administrator account created. Save your login details securely.","success");}catch(err){showNotice(err.message,"error");}});
 boot();
 </script></body></html>'''
