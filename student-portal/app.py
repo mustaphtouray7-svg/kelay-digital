@@ -359,7 +359,7 @@ function applyLanguage(){
   document.documentElement.lang=ar?"ar":"en";
   document.documentElement.dir=ar?"rtl":"ltr";
   document.body.dir=ar?"rtl":"ltr";
-  document.querySelectorAll("body *").forEach(el=>{
+  document.querySelectorAll("body *:not(#languageToggle)").forEach(el=>{
     if(el.children.length===0 && el.childNodes.length){
       el.childNodes.forEach(node=>{
         if(node.nodeType===Node.TEXT_NODE && node.textContent.trim()){
