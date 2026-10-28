@@ -15,7 +15,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_SAMESITE="Lax",
     PERMANENT_SESSION_LIFETIME=60 * 60 * 8,
-    MAX_CONTENT_LENGTH=1 * 1024 * 1024,
+    MAX_CONTENT_LENGTH=600 * 1024,
 )
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 SCHOOL_NAME = "Alh. Lalo Kanteh Islamic Institute"
@@ -38,10 +38,12 @@ def init_db():
                 role VARCHAR(16) NOT NULL DEFAULT 'student' CHECK (role IN ('student','admin')),
                 status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
                 class_name VARCHAR(80) NOT NULL DEFAULT '',
+                profile_image TEXT NOT NULL DEFAULT '',
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 approved_at TIMESTAMPTZ
             )
         """)
+        conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS profile_image TEXT NOT NULL DEFAULT ''")
         conn.execute("CREATE INDEX IF NOT EXISTS portal_users_status_idx ON portal_users(status)")
         conn.commit()
 
@@ -86,7 +88,7 @@ def admin_required(fn):
     return wrapped
 
 def user_public(row):
-    return {k: row.get(k) for k in ("id", "full_name", "email", "student_id", "role", "status", "class_name", "created_at")}
+    return {k: row.get(k) for k in ("id", "full_name", "email", "student_id", "role", "status", "class_name", "profile_image", "created_at")}
 
 @app.get("/health")
 def health():
@@ -138,6 +140,13 @@ def setup_admin():
     session.permanent = True
     return jsonify({"user": user_public(row)}), 201
 
+def valid_profile_image(value):
+    if not isinstance(value, str) or not value:
+        return False
+    if not (value.startswith("data:image/jpeg;base64,") or value.startswith("data:image/png;base64,")):
+        return False
+    return len(value) <= 400_000
+
 @app.post("/api/register")
 def register():
     if not verify_csrf():
@@ -147,6 +156,9 @@ def register():
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", ""))
     student_id = str(data.get("student_id", "")).strip() or None
+    profile_image = str(data.get("profile_image", ""))
+    if not valid_profile_image(profile_image):
+        return jsonify({"error": "Upload a profile picture (JPEG or PNG)."}), 400
     if len(name) < 2 or len(name) > 120 or "@" not in email or len(email) > 254:
         return jsonify({"error": "Enter your full name and a valid email address."}), 400
     if len(password) < 12:
@@ -154,8 +166,8 @@ def register():
     try:
         with db() as conn:
             row = conn.execute(
-                "INSERT INTO portal_users(full_name,email,student_id,password_hash,status) VALUES (%s,%s,%s,%s,'pending') RETURNING id",
-                (name, email, student_id, generate_password_hash(password))
+                "INSERT INTO portal_users(full_name,email,student_id,password_hash,status,profile_image) VALUES (%s,%s,%s,%s,'pending',%s) RETURNING id",
+                (name, email, student_id, generate_password_hash(password), profile_image)
             ).fetchone()
             conn.commit()
         return jsonify({"message": "Registration submitted. The school must approve your account before you can sign in.", "id": row["id"]}), 201
@@ -274,7 +286,7 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 <div class="card"><h2>Sign in</h2><p class="muted">Use your approved school account.</p>
 <form id="loginForm"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" required maxlength="254"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form></div>
 <div class="card"><h2>Request an account</h2><p class="muted">The school must approve your registration before you can sign in.</p>
-<form id="registerForm"><label for="regName">Full name</label><input id="regName" required maxlength="120"><label for="regEmail">Email</label><input id="regEmail" type="email" required maxlength="254"><label for="regStudentId">Student ID (if known)</label><input id="regStudentId" maxlength="40"><label for="regPassword">Password (12 characters minimum)</label><input id="regPassword" type="password" minlength="12" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
+<form id="registerForm"><label for="regName">Full name</label><input id="regName" required maxlength="120"><label for="regEmail">Email</label><input id="regEmail" type="email" required maxlength="254"><label for="regStudentId">Student ID (if known)</label><input id="regStudentId" maxlength="40"><label for="regPhoto">Profile picture (required)</label><input id="regPhoto" type="file" accept="image/jpeg,image/png" required><p class="tiny">JPEG or PNG, up to 5 MB before automatic resizing.</p><img id="photoPreview" class="hidden" alt="Profile picture preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--line)"><label for="regPassword">Password (12 characters minimum)</label><input id="regPassword" type="password" minlength="12" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
 </section>
 <section id="dashboard" class="hidden"><div class="card"><div class="bar"><div><p class="eyebrow" style="color:var(--brown)">YOUR ACCOUNT</p><h2 id="welcome">Welcome</h2></div><button class="secondary" id="logout">Sign out</button></div><div id="profile"></div></div>
 <div id="adminPanel" class="hidden">
@@ -292,12 +304,14 @@ async function api(path, data, method="POST"){const res=await fetch(path,{method
 function toggle(id,on){$(id).classList.toggle("hidden",!on);}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 async function loadCsrf(){const r=await fetch("/api/csrf");const d=await r.json();if(!r.ok)throw new Error(d.error||"Portal is not configured yet.");csrf=d.csrf_token;}
-function renderProfile(u){$("welcome").textContent="Welcome, "+u.full_name;$("profile").innerHTML='<p><strong>Email:</strong> '+esc(u.email)+'</p><p><strong>Student ID:</strong> '+esc(u.student_id||"Not assigned")+'</p><p><strong>Class:</strong> '+esc(u.class_name||"Not assigned")+'</p><p><strong>Account status:</strong> <span class="pill">'+esc(u.status)+'</span></p><p class="muted">Exam results and attendance can be added when the school provides verified records.</p>';}
+async function imageToDataUrl(file){if(!file||!["image/jpeg","image/png"].includes(file.type))throw new Error("Choose a JPEG or PNG profile picture.");if(file.size>5*1024*1024)throw new Error("Choose a picture smaller than 5 MB.");const src=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Could not read that picture."));r.readAsDataURL(file);});const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error("That picture could not be opened."));i.src=src;});const scale=Math.min(1,320/Math.max(img.width,img.height));const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);return canvas.toDataURL("image/jpeg",0.68);}
+$("regPhoto").addEventListener("change",async()=>{try{if($("regPhoto").files[0]){$("photoPreview").src=await imageToDataUrl($("regPhoto").files[0]);toggle("photoPreview",true);}}catch(e){toggle("photoPreview",false);showNotice(e.message,"error");}});
+function renderProfile(u){$("welcome").textContent="Welcome, "+u.full_name;$("profile").innerHTML=(u.profile_image?'<img src="'+u.profile_image+'" alt="Student profile picture" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--line)">':"")+'<p><strong>Email:</strong> '+esc(u.email)+'</p><p><strong>Student ID:</strong> '+esc(u.student_id||"Not assigned")+'</p><p><strong>Class:</strong> '+esc(u.class_name||"Not assigned")+'</p><p><strong>Account status:</strong> <span class="pill">'+esc(u.status)+'</span></p><p class="muted">Exam results and attendance can be added when the school provides verified records.</p>';}
 async function refreshStudents(){const d=await api("/api/admin/students",null,"GET");const list=$("studentList");if(!d.students.length){list.textContent="No student accounts yet.";return;}list.innerHTML=d.students.map(s=>'<div class="student"><div>'+(s.profile_image?'<img src="'+s.profile_image+'" alt="Student profile" style="width:58px;height:58px;object-fit:cover;border-radius:50%;vertical-align:middle;margin-right:10px">':'<span class="pill">No photo</span>')+'<strong>'+esc(s.full_name)+'</strong><div class="tiny">'+esc(s.email)+' · '+esc(s.student_id||"No student ID")+' · '+esc(s.class_name||"No class")+'</div><span class="pill">'+esc(s.status)+'</span></div><div>'+ (s.status!=="approved"?'<button data-id="'+s.id+'" data-status="approved">Approve</button> ':"")+(s.status!=="rejected"?'<button class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></div>').join("");list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));}
 async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin)await refreshStudents();}
 async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();if(sd.setup_needed){toggle("setup",true);}const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else{toggle("auth",true);}}catch(e){toggle("auth",true);showNotice("Portal setup is not complete yet. Please contact the website administrator. "+e.message,"error");}}
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/login",{email:$("loginEmail").value,password:$("loginPassword").value});await showUser(d.user);showNotice("Signed in successfully.","success");}catch(err){showNotice(err.message,"error");}});
-$("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/register",{full_name:$("regName").value,email:$("regEmail").value,student_id:$("regStudentId").value,password:$("regPassword").value});e.target.reset();showNotice(d.message,"success");}catch(err){showNotice(err.message,"error");}});
+$("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const photo=await imageToDataUrl($("regPhoto").files[0]);const d=await api("/api/register",{full_name:$("regName").value,email:$("regEmail").value,student_id:$("regStudentId").value,password:$("regPassword").value,profile_image:photo});e.target.reset();toggle("photoPreview",false);showNotice(d.message,"success");}catch(err){showNotice(err.message,"error");}});
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{});location.reload();}catch(e){showNotice(e.message,"error");}});
 $("createStudent").addEventListener("submit",async e=>{e.preventDefault();try{await api("/api/admin/create-student",{full_name:$("newName").value,email:$("newEmail").value,student_id:$("newId").value,class_name:$("newClass").value,password:$("newPassword").value});e.target.reset();showNotice("Student account created and approved.","success");await refreshStudents();}catch(err){showNotice(err.message,"error");}});
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/setup-admin",{setup_key:$("setupKey").value,full_name:$("adminName").value,email:$("adminEmail").value,password:$("adminPassword").value});await showUser(d.user);showNotice("Administrator account created. Save your login details securely.","success");}catch(err){showNotice(err.message,"error");}});
