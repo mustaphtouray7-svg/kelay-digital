@@ -353,7 +353,7 @@ const translations = {
 "Sign in successfully.":"تم تسجيل الدخول بنجاح.","Student status updated.":"تم تحديث حالة الطالب.","Student account created and approved.":"تم إنشاء حساب الطالب واعتماده.",
 "Passwords do not match.":"كلمتا المرور غير متطابقتين.","Choose a JPEG or PNG profile picture.":"اختر صورة شخصية بصيغة JPEG أو PNG.","Choose a picture smaller than 5 MB.":"اختر صورة أصغر من 5 ميغابايت.","Could not read that picture.":"تعذرت قراءة الصورة.","That picture could not be opened.":"تعذر فتح الصورة.",
 "Please sign in.":"يرجى تسجيل الدخول.","Phone number or password is incorrect.":"رقم الهاتف أو كلمة المرور غير صحيحة.","Student registration is not open yet. Please contact the school.":"لم يُفتح تسجيل الطلاب بعد. يرجى التواصل مع المدرسة.","Refresh the page and try again.":"حدّث الصفحة وحاول مرة أخرى.","Unexpected server response.":"استجابة غير متوقعة من الخادم.","Request failed.":"فشل الطلب.","Portal is not configured yet.":"لم يتم إعداد البوابة بعد.","Portal setup is not complete yet. Please contact the website administrator. ":"لم يكتمل إعداد البوابة بعد. يرجى التواصل مع مسؤول الموقع. ",
-"Registration submitted. The school must approve your account before you can sign in.":"تم إرسال طلب التسجيل. يجب أن توافق المدرسة على حسابك قبل تسجيل الدخول.","DEMONSTRATION WEBSITE":"موقع تجريبي","This is a proposed school website, not yet officially approved by the school. Please do not enter real student information.":"هذا موقع مقترح للمدرسة ولم تتم الموافقة عليه رسميًا بعد. يرجى عدم إدخال معلومات حقيقية عن الطلاب.","This is a demonstration portal. Student registration will open only after the school officially approves the website.":"هذه بوابة تجريبية. سيتم فتح تسجيل الطلاب بعد موافقة المدرسة رسميًا على الموقع."
+"Registration submitted. The school must approve your account before you can sign in.":"تم إرسال طلب التسجيل. يجب أن توافق المدرسة على حسابك قبل تسجيل الدخول.","DEMONSTRATION WEBSITE":"موقع تجريبي","— This is a proposed school website, not yet officially approved by the school. Please do not enter real student information.":"— هذا موقع مقترح للمدرسة ولم تتم الموافقة عليه رسميًا بعد. يرجى عدم إدخال معلومات حقيقية عن الطلاب.","This is a proposed school website, not yet officially approved by the school. Please do not enter real student information.":"هذا موقع مقترح للمدرسة ولم تتم الموافقة عليه رسميًا بعد. يرجى عدم إدخال معلومات حقيقية عن الطلاب.","This is a demonstration portal. Student registration will open only after the school officially approves the website.":"هذه بوابة تجريبية. سيتم فتح تسجيل الطلاب بعد موافقة المدرسة رسميًا على الموقع."
 };
 function applyLanguage(){
   const ar=currentLanguage==="ar";
@@ -361,23 +361,27 @@ function applyLanguage(){
   document.documentElement.dir=ar?"rtl":"ltr";
   document.body.dir=ar?"rtl":"ltr";
   document.querySelectorAll("body *:not(#languageToggle)").forEach(el=>{
-    if(el.children.length===0 && el.childNodes.length){
-      el.childNodes.forEach(node=>{
-        if(node.nodeType===Node.TEXT_NODE && node.textContent.trim()){
-          if(!originalText.has(node)) originalText.set(node,node.textContent);
-          const source=originalText.get(node), trimmed=source.trim();
-          const translated=ar?(translations[trimmed]||trimmed):trimmed;
-          node.textContent=source.replace(trimmed,translated);
-        }
-      });
-    }
-  });
-  document.querySelectorAll("input").forEach(el=>{
-    const label=document.querySelector('label[for="'+el.id+'"]');
-    if(label && translations[label.textContent.trim()]) el.setAttribute("aria-label",translations[label.textContent.trim()]);
+    el.childNodes.forEach(node=>{
+      if(node.nodeType===Node.TEXT_NODE && node.textContent.trim()){
+        if(!originalText.has(node)) originalText.set(node,node.textContent);
+        const source=originalText.get(node), trimmed=source.trim();
+        const translated=ar?(translations[trimmed]||trimmed):trimmed;
+        node.textContent=source.replace(trimmed,translated);
+      }
+    });
+    ["placeholder","title","aria-label"].forEach(attr=>{
+      if(!el.hasAttribute(attr)) return;
+      const current=el.getAttribute(attr);
+      if(!el.dataset["original"+attr.replace(/(^|-)(.)/g,(_,a,b)=>b.toUpperCase())]){
+        el.dataset["original"+attr.replace(/(^|-)(.)/g,(_,a,b)=>b.toUpperCase())]=current;
+      }
+      const key=el.dataset["original"+attr.replace(/(^|-)(.)/g,(_,a,b)=>b.toUpperCase())];
+      if(ar && translations[key]) el.setAttribute(attr,translations[key]);
+      else if(!ar) el.setAttribute(attr,key);
+    });
   });
   $("languageToggle").textContent=ar?"English":"العربية";
-  $("languageToggle").setAttribute("aria-label",ar?"Switch to English":"التبديل إلى الإنجليزية");
+  $("languageToggle").setAttribute("aria-label",ar?"Switch to English":"Switch to Arabic");
 }
 $("languageToggle").addEventListener("click",()=>{
   currentLanguage=currentLanguage==="en"?"ar":"en";
