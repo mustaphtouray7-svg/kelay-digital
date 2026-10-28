@@ -166,38 +166,56 @@ def register():
         return jsonify({"error": "Refresh the page and try again."}), 400
     data = request.json or {}
     name = str(data.get("full_name", "")).strip()
-    email = str(data.get("email", "")).strip().lower()
+    father_name = str(data.get("father_name", "")).strip()
+    surname = str(data.get("surname", "")).strip()
+    phone = str(data.get("phone", "")).strip()
+    date_of_birth = str(data.get("date_of_birth", "")).strip()
+    class_name = str(data.get("class_name", "")).strip()
     password = str(data.get("password", ""))
-    student_id = str(data.get("student_id", "")).strip() or None
+    password_confirm = str(data.get("password_confirm", ""))
     profile_image = str(data.get("profile_image", ""))
     if not valid_profile_image(profile_image):
         return jsonify({"error": "Upload a profile picture (JPEG or PNG)."}), 400
-    if len(name) < 2 or len(name) > 120 or "@" not in email or len(email) > 254:
-        return jsonify({"error": "Enter your full name and a valid email address."}), 400
+    if not all([name, father_name, surname, phone, date_of_birth, class_name]):
+        return jsonify({"error": "Complete your name, father's name, surname, date of birth, class, and phone number."}), 400
+    if len(name) > 120 or len(father_name) > 120 or len(surname) > 120 or len(phone) > 40 or len(class_name) > 80:
+        return jsonify({"error": "One or more fields are too long."}), 400
+    if password != password_confirm:
+        return jsonify({"error": "Passwords do not match."}), 400
     if len(password) < 12:
         return jsonify({"error": "Use a password with at least 12 characters."}), 400
     try:
+        dob = datetime.strptime(date_of_birth, "%Y-%m-%d").date()
+        if dob >= datetime.now().date():
+            return jsonify({"error": "Enter a valid date of birth."}), 400
+    except ValueError:
+        return jsonify({"error": "Enter a valid date of birth."}), 400
+    email = "student-" + "".join(ch for ch in phone if ch.isdigit()) + "@students.lalokanteh.local"
+    try:
         with db() as conn:
+            duplicate = conn.execute("SELECT id FROM portal_users WHERE phone=%s AND role='student' LIMIT 1", (phone,)).fetchone()
+            if duplicate:
+                return jsonify({"error": "This phone number already has a student account. Contact the school."}), 409
             row = conn.execute(
-                "INSERT INTO portal_users(full_name,email,student_id,password_hash,status,profile_image) VALUES (%s,%s,%s,%s,'pending',%s) RETURNING id",
-                (name, email, student_id, generate_password_hash(password), profile_image)
+                "INSERT INTO portal_users(full_name,father_name,surname,phone,email,password_hash,status,class_name,date_of_birth,profile_image) VALUES (%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s) RETURNING id",
+                (name, father_name, surname, phone, email, generate_password_hash(password), class_name, dob, profile_image)
             ).fetchone()
             conn.commit()
         return jsonify({"message": "Registration submitted. The school must approve your account before you can sign in.", "id": row["id"]}), 201
     except psycopg.errors.UniqueViolation:
-        return jsonify({"error": "That email or student ID is already registered. Contact the school if you need help."}), 409
+        return jsonify({"error": "That phone number is already registered. Contact the school if you need help."}), 409
 
 @app.post("/api/login")
 def login():
     if not verify_csrf():
         return jsonify({"error": "Refresh the page and try again."}), 400
     data = request.json or {}
-    email = str(data.get("email", "")).strip().lower()
+    login_value = str(data.get("login", data.get("email", ""))).strip()
     password = str(data.get("password", ""))
     with db() as conn:
-        row = conn.execute("SELECT * FROM portal_users WHERE email=%s", (email,)).fetchone()
+        row = conn.execute("SELECT * FROM portal_users WHERE lower(email)=lower(%s) OR phone=%s ORDER BY CASE WHEN phone=%s THEN 0 ELSE 1 END LIMIT 1", (login_value, login_value, login_value)).fetchone()
     if not row or not check_password_hash(row["password_hash"], password):
-        return jsonify({"error": "Email or password is incorrect."}), 401
+        return jsonify({"error": "Phone number or password is incorrect."}), 401
     if row["status"] != "approved":
         return jsonify({"error": "Your account is " + row["status"] + ". Please contact the school if you need help."}), 403
     session.clear()
