@@ -107,9 +107,10 @@ def user_public(row):
 @app.get("/health")
 def health():
     try:
+        init_db()
         with db() as conn:
             conn.execute("SELECT 1")
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "database": "connected", "schema": "ready"})
     except Exception:
         return jsonify({"status": "database_not_ready"}), 503
 
@@ -118,9 +119,10 @@ def setup_status():
     try:
         with db() as conn:
             exists = conn.execute("SELECT id FROM portal_users WHERE role='admin' LIMIT 1").fetchone()
-        return jsonify({"setup_needed": not bool(exists)})
+        return jsonify({"setup_needed": not bool(exists), "database_ready": True})
     except Exception:
-        return jsonify({"setup_needed": True, "database_ready": False})
+        app.logger.exception("Student portal setup-status database check failed")
+        return jsonify({"setup_needed": False, "database_ready": False}), 503
 
 @app.get("/api/csrf")
 def csrf():
@@ -319,7 +321,7 @@ button.secondary{background:var(--sand);color:var(--brown)}button:disabled{opaci
 footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid var(--line)}a{color:var(--brown)}
 </style></head><body>
 <header><a class="brand" href="/">ALH. LALO KANTEH ISLAMIC INSTITUTE<small>TABOKOTO · THE GAMBIA</small></a><div class="header-actions"><a href="https://kelay-digital.onrender.com/school-demo/" class="tiny" data-i18n="School website ↗">School website ↗</a><button type="button" id="languageToggle" class="secondary language-toggle" aria-label="Switch language">العربية</button></div></header>
-<main><div class="notice" role="note"><strong>DEMONSTRATION WEBSITE</strong> — This is a proposed school website, not yet officially approved by the school. Please do not enter real student information.</div><section class="hero"><div class="eyebrow">STUDENT AREA</div><h1>Student Portal</h1><p>Access your student account, or request registration. Student accounts created by self-registration must be approved by the school.</p></section>
+<main><section class="hero"><div class="eyebrow">STUDENT AREA</div><h1>Student Portal</h1><p>Access your student account, or request registration. Student accounts created by self-registration must be approved by the school.</p></section>
 <div id="notice" class="notice hidden" role="status"></div>
 <section id="setup" class="card hidden" style="margin-bottom:18px"><h2>First-time administrator setup</h2><p class="muted">Use this one-time setup only when the school is ready to appoint its first portal administrator. You need the private setup key configured by the site owner.</p><form id="setupForm"><label for="setupName">Administrator full name</label><input id="setupName" required maxlength="120" autocomplete="name"><label for="setupEmail">Administrator email</label><input id="setupEmail" type="email" required maxlength="254" autocomplete="email"><label for="setupPassword">Strong password (at least 12 characters)</label><input id="setupPassword" type="password" required minlength="12" autocomplete="new-password"><label for="setupKey">One-time setup key</label><input id="setupKey" type="password" required autocomplete="off"><button type="submit">Create first administrator</button></form><p class="tiny">Do not share the setup key. Once the first administrator exists, this setup endpoint cannot create another first administrator.</p></section>
 <section id="auth" class="layout">
@@ -399,7 +401,7 @@ $("regPhoto").addEventListener("change",async()=>{try{if($("regPhoto").files[0])
 function renderProfile(u){$("welcome").textContent="Welcome, "+u.full_name;$("profile").innerHTML=(u.profile_image?'<img src="'+u.profile_image+'" alt="Student profile picture" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--line)">':"")+'<p><strong>Email:</strong> '+esc(u.email)+'</p><p><strong>Student ID:</strong> '+esc(u.student_id||"Not assigned")+'</p><p><strong>Class:</strong> '+esc(u.class_name||"Not assigned")+'</p><p><strong>Account status:</strong> <span class="pill">'+esc(u.status)+'</span></p><p class="muted">Exam results and attendance can be added when the school provides verified records.</p>';}
 async function refreshStudents(){const d=await api("/api/admin/students",null,"GET");const list=$("studentList");if(!d.students.length){list.textContent="No student accounts yet.";return;}list.innerHTML=d.students.map(s=>'<div class="student"><div>'+(s.profile_image?'<img src="'+s.profile_image+'" alt="Student profile" style="width:58px;height:58px;object-fit:cover;border-radius:50%;vertical-align:middle;margin-right:10px">':'<span class="pill">No photo</span>')+'<strong>'+esc(s.full_name)+'</strong><div class="tiny">'+esc(s.father_name)+' '+esc(s.surname)+' · '+esc(s.arabic_name)+' · '+esc(s.phone)+' · '+esc(s.grade)+' · '+esc(s.email)+' · '+esc(s.student_id||"No student ID")+' · '+esc(s.class_name||"No class")+'</div><span class="pill">'+esc(s.status)+'</span></div><div>'+ (s.status!=="approved"?'<button data-id="'+s.id+'" data-status="approved">Approve</button> ':"")+(s.status!=="rejected"?'<button class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></div>').join("");list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));}
 async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin)await refreshStudents();}
-async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else if(sd.setup_needed){toggle("auth",false);toggle("setup",true);}else{toggle("setup",false);toggle("auth",true);}}catch(e){toggle("setup",false);toggle("auth",true);showNotice("Portal setup is not complete yet. Please contact the website administrator. "+e.message,"error");}}
+async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else if(!sd.database_ready){throw new Error("The student database is not ready. Please contact the website administrator.");}else if(sd.setup_needed){toggle("auth",false);toggle("setup",true);}else{toggle("setup",false);toggle("auth",true);}}catch(e){toggle("setup",false);toggle("auth",true);showNotice("Portal setup is not complete yet. "+e.message,"error");}}
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/setup-admin",{setup_key:$("setupKey").value,full_name:$("setupName").value,email:$("setupEmail").value,password:$("setupPassword").value});e.target.reset();toggle("setup",false);await showUser(d.user);showNotice("First administrator account created successfully.","success");}catch(err){showNotice(err.message,"error");}});
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/login",{login:$("loginEmail").value,password:$("loginPassword").value});await showUser(d.user);showNotice("Signed in successfully.","success");}catch(err){showNotice(err.message,"error");}});
 $("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const photo=await imageToDataUrl($("regPhoto").files[0]);if($("regPassword").value!==$("regPasswordConfirm").value)throw new Error("Passwords do not match.");const d=await api("/api/register",{full_name:$("regName").value,father_name:$("regFather").value,surname:$("regSurname").value,date_of_birth:$("regDob").value,phone:$("regPhone").value,class_name:$("regClass").value,password:$("regPassword").value,password_confirm:$("regPasswordConfirm").value,profile_image:photo});e.target.reset();toggle("photoPreview",false);showNotice(d.message,"success");}catch(err){showNotice(err.message,"error");}});
