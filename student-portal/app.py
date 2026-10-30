@@ -288,6 +288,27 @@ def create_student():
     except psycopg.errors.UniqueViolation:
         return jsonify({"error": "That email or student ID is already in use."}), 409
 
+@app.post("/api/admin/students/<int:user_id>/student-id")
+@admin_required
+def assign_student_id(user_id):
+    if not verify_csrf():
+        return jsonify({"error": "Refresh the page and try again."}), 400
+    student_id = str((request.json or {}).get("student_id", "")).strip()
+    if not student_id or len(student_id) > 40:
+        return jsonify({"error": "Enter a student ID of 1 to 40 characters."}), 400
+    try:
+        with db() as conn:
+            row = conn.execute(
+                "UPDATE portal_users SET student_id=%s WHERE id=%s AND role='student' RETURNING *",
+                (student_id, user_id)
+            ).fetchone()
+            conn.commit()
+        if not row:
+            return jsonify({"error": "Student account not found."}), 404
+        return jsonify({"student": user_public(row)})
+    except psycopg.errors.UniqueViolation:
+        return jsonify({"error": "That student ID is already assigned to another student."}), 409
+
 @app.post("/api/admin/students/<int:user_id>/status")
 @admin_required
 def update_status(user_id):
@@ -337,7 +358,7 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 </section>
 <section id="dashboard" class="hidden"><div class="card"><div class="bar"><div><p class="eyebrow" style="color:var(--brown)">YOUR ACCOUNT</p><h2 id="welcome">Welcome</h2></div><button class="secondary" id="logout">Sign out</button></div><div id="profile"></div></div>
 <div id="adminPanel" class="hidden">
-<div class="card" style="margin-top:18px"><h2>Pending and approved students</h2><p class="muted">Approve self-registrations or reject accounts. Only approved students can sign in.</p><div id="studentList">Loading student records…</div></div>
+<div class="card" style="margin-top:18px"><h2>Student records</h2><p class="muted">Review each student's name and nationality, and assign a unique student ID. You can also approve or reject accounts.</p><div id="studentList">Loading student records…</div></div>
 <div class="card" style="margin-top:18px"><h2>Create a student account</h2><form id="createStudent"><label for="newName">First name</label><input id="newName" required maxlength="120"><label for="newFather">Father name</label><input id="newFather" required maxlength="120"><label for="newSurname">Surname</label><input id="newSurname" required maxlength="120"><label for="newArabic">Full name in Arabic</label><input id="newArabic" required maxlength="200" dir="rtl"><label for="newPhone">Phone number</label><input id="newPhone" type="tel" required maxlength="40"><label for="newEmail">Email</label><input id="newEmail" type="email" required maxlength="254"><label for="newId">Student ID</label><input id="newId" maxlength="40"><label for="newClass">Class</label><input id="newClass" required maxlength="80"><label for="newGrade">Grade</label><input id="newGrade" required maxlength="80"><label for="newPassword">Temporary password (12 characters minimum)</label><input id="newPassword" type="password" minlength="12" required><button type="submit">Create approved account</button></form></div></div>
 </section>
 </main><footer>Alh. Lalo Kanteh Islamic Institute · Tabokoto, The Gambia</footer>
@@ -405,7 +426,14 @@ async function loadCsrf(){const r=await fetch("/api/csrf");const d=await r.json(
 async function imageToDataUrl(file){if(!file)throw new Error("Choose a profile picture first.");if(!file.type.startsWith("image/"))throw new Error("Choose an image file such as JPG, PNG, or WebP.");if(file.size>5*1024*1024)throw new Error("Choose a picture smaller than 5 MB.");const src=URL.createObjectURL(file);try{const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error("This photo format cannot be opened. Please save it as JPG or PNG and try again."));i.src=src;});const scale=Math.min(1,320/Math.max(img.width,img.height));const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Photo processing is unavailable in this browser. Try Chrome or Firefox.");ctx.drawImage(img,0,0,canvas.width,canvas.height);return canvas.toDataURL("image/jpeg",0.68);}finally{URL.revokeObjectURL(src);}}
 $("regPhoto").addEventListener("change",async()=>{try{if($("regPhoto").files[0]){$("photoPreview").src=await imageToDataUrl($("regPhoto").files[0]);toggle("photoPreview",true);}}catch(e){toggle("photoPreview",false);showNotice(e.message,"error");}});
 function renderProfile(u){$("welcome").textContent="Welcome, "+u.full_name;$("profile").innerHTML=(u.profile_image?'<img src="'+u.profile_image+'" alt="Student profile picture" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--line)">':"")+'<p><strong>Email:</strong> '+esc(u.email)+'</p><p><strong>Student ID:</strong> '+esc(u.student_id||"Not assigned")+'</p><p><strong>Class:</strong> '+esc(u.class_name||"Not assigned")+'</p><p><strong>Account status:</strong> <span class="pill">'+esc(u.status)+'</span></p><p class="muted">Exam results and attendance can be added when the school provides verified records.</p>';}
-async function refreshStudents(){const d=await api("/api/admin/students",null,"GET");const list=$("studentList");if(!d.students.length){list.textContent="No student accounts yet.";return;}list.innerHTML=d.students.map(s=>'<div class="student"><div>'+(s.profile_image?'<img src="'+s.profile_image+'" alt="Student profile" style="width:58px;height:58px;object-fit:cover;border-radius:50%;vertical-align:middle;margin-right:10px">':'<span class="pill">No photo</span>')+'<strong>'+esc(s.full_name)+'</strong><div class="tiny">'+esc(s.father_name)+' '+esc(s.surname)+' · '+esc(s.arabic_name)+' · '+esc(s.phone)+' · '+esc(s.grade)+' · '+esc(s.email)+' · '+esc(s.student_id||"No student ID")+' · '+esc(s.class_name||"No class")+'</div><span class="pill">'+esc(s.status)+'</span></div><div>'+ (s.status!=="approved"?'<button data-id="'+s.id+'" data-status="approved">Approve</button> ':"")+(s.status!=="rejected"?'<button class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></div>').join("");list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));}
+async function refreshStudents(){
+  const d=await api("/api/admin/students",null,"GET");
+  const list=$("studentList");
+  if(!d.students.length){list.textContent="No student accounts yet.";return;}
+  list.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px"><thead><tr><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line)">Student name</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line)">Nationality</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line)">Student ID</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line)">Status / actions</th></tr></thead><tbody>'+d.students.map(s=>'<tr><td style="padding:10px;border-bottom:1px solid var(--line)">'+esc(s.full_name)+'</td><td style="padding:10px;border-bottom:1px solid var(--line)">'+esc(s.nationality||"—")+'</td><td style="padding:10px;border-bottom:1px solid var(--line)"><div style="display:flex;gap:6px;min-width:180px"><input aria-label="Student ID for '+esc(s.full_name)+'" data-student-id="'+s.id+'" value="'+esc(s.student_id||"")+'" maxlength="40" placeholder="Enter student ID" style="min-width:110px;padding:8px"><button type="button" data-save-id="'+s.id+'" style="margin:0;padding:8px 10px">Save</button></div></td><td style="padding:10px;border-bottom:1px solid var(--line)"><span class="pill">'+esc(s.status)+'</span><div>'+(s.status!=="approved"?'<button data-id="'+s.id+'" data-status="approved">Approve</button> ':"")+(s.status!=="rejected"?'<button class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></td></tr>').join("")+'</tbody></table></div>';
+  list.querySelectorAll("button[data-save-id]").forEach(b=>b.addEventListener("click",async()=>{const field=list.querySelector('input[data-student-id="'+b.dataset.saveId+'"]');try{await api("/api/admin/students/"+b.dataset.saveId+"/student-id",{student_id:field.value});showNotice("Student ID saved.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));
+  list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));
+}
 async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin)await refreshStudents();}
 async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else if(!sd.database_ready){throw new Error("The student database is not ready. Please contact the website administrator.");}else if(sd.setup_needed){toggle("auth",false);toggle("setup",true);}else{toggle("setup",false);toggle("auth",true);}}catch(e){toggle("setup",false);toggle("auth",true);showNotice("Portal setup is not complete yet. "+e.message,"error");}}
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/setup-admin",{setup_key:$("setupKey").value,full_name:$("setupName").value,email:$("setupEmail").value,password:$("setupPassword").value});e.target.reset();toggle("setup",false);await showUser(d.user);showNotice("First administrator account created successfully.","success");}catch(err){showNotice(err.message,"error");}});
