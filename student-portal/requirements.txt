@@ -3,4 +3,3 @@ psycopg[binary]==3.3.6
 gunicorn==23.0.0
 Pillow==12.1.1
 pillow-heif==1.1.1
-pillow-avif-plugin==1.5.2
