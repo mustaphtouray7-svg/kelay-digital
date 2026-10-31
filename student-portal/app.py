@@ -1,10 +1,16 @@
 import os
 import secrets
+import base64
+import binascii
+from io import BytesIO
 from datetime import datetime, timezone
 from functools import wraps
 
 import psycopg
 from psycopg.rows import dict_row
+from PIL import Image, ImageOps, UnidentifiedImageError
+from pillow_heif import register_heif_opener
+import pillow_avif
 from flask import Flask, request, session, jsonify, render_template_string, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -15,7 +21,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_SAMESITE="Lax",
     PERMANENT_SESSION_LIFETIME=60 * 60 * 8,
-    MAX_CONTENT_LENGTH=600 * 1024,
+    MAX_CONTENT_LENGTH=8 * 1024 * 1024,
 )
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 SCHOOL_NAME = "Alh. Lalo Kanteh Islamic Institute"
@@ -158,12 +164,37 @@ def setup_admin():
     session.permanent = True
     return jsonify({"user": user_public(row)}), 201
 
-def valid_profile_image(value):
-    if not isinstance(value, str) or not value:
-        return False
-    if not (value.startswith("data:image/jpeg;base64,") or value.startswith("data:image/png;base64,")):
-        return False
-    return len(value) <= 400_000
+register_heif_opener()
+
+def normalize_profile_image(value):
+    """Decode common raster formats and store a compact, normalized JPEG."""
+    if not isinstance(value, str) or not value.startswith("data:image/") or ";base64," not in value:
+        return None
+    try:
+        _, encoded = value.split(",", 1)
+        raw = base64.b64decode(encoded, validate=True)
+        if not raw or len(raw) > 5 * 1024 * 1024:
+            return None
+        with Image.open(BytesIO(raw)) as source:
+            source.seek(0)
+            image = ImageOps.exif_transpose(source)
+            image.load()
+            if image.width < 1 or image.height < 1 or image.width * image.height > 40_000_000:
+                return None
+            if image.mode in ("RGBA", "LA") or "transparency" in image.info:
+                rgba = image.convert("RGBA")
+                background = Image.new("RGB", rgba.size, "white")
+                background.paste(rgba, mask=rgba.getchannel("A"))
+                image = background
+            else:
+                image = image.convert("RGB")
+            image.thumbnail((480, 480), Image.Resampling.LANCZOS)
+            output = BytesIO()
+            image.save(output, format="JPEG", quality=82, optimize=True)
+            return "data:image/jpeg;base64," + base64.b64encode(output.getvalue()).decode("ascii")
+    except (ValueError, binascii.Error, UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        return None
+
 
 @app.post("/api/register")
 def register():
@@ -182,9 +213,9 @@ def register():
     nationality = str(data.get("nationality", "")).strip()
     password = str(data.get("password", ""))
     password_confirm = str(data.get("password_confirm", ""))
-    profile_image = str(data.get("profile_image", ""))
-    if not valid_profile_image(profile_image):
-        return jsonify({"error": "Upload a profile picture (JPEG or PNG)."}), 400
+    profile_image = normalize_profile_image(data.get("profile_image", ""))
+    if not profile_image:
+        return jsonify({"error": "Choose a valid image file up to 5 MB. Supported formats include JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF and AVIF."}), 400
     if not all([name, father_name, surname, phone, date_of_birth, class_name, gender, nationality]):
         return jsonify({"error": "Complete your name, father's name, surname, date of birth, class, and phone number."}), 400
     if len(name) > 120 or len(father_name) > 120 or len(surname) > 120 or len(phone) > 40 or len(class_name) > 80:
@@ -354,7 +385,7 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 <form id="loginForm"><label for="loginEmail">Phone number or administrator email</label><input id="loginEmail" autocomplete="username" required maxlength="254"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form></div>
 <div class="card"><h2>Student registration</h2><p class="muted">Register using your school details. The school must approve your account before you can sign in.</p><form id="registerForm"><label for="regName">First name</label><input id="regName" required maxlength="120"><label for="regFather">Father's name</label><input id="regFather" required maxlength="120"><label for="regSurname">Surname</label><input id="regSurname" required maxlength="120"><label for="regDob">Date of birth</label><input id="regDob" type="date" required><label for="regClass">Current class</label><select id="regClass" required><option value="">Select class</option><option>Nursery 1</option><option>Nursery 2</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
 <label for="regGender">Gender</label><select id="regGender" required><option value="">Select gender</option><option value="Male">Male</option><option value="Female">Female</option></select>
-<label for="regNationality">Nationality</label><select id="regNationality" required><option value="">Select nationality</option></select><label for="regPhone">Phone number</label><input id="regPhone" type="tel" required maxlength="40" autocomplete="tel"><label for="regPhoto">Profile picture (required)</label><input id="regPhoto" type="file" accept="image/*" required><p class="tiny">JPEG or PNG, up to 5 MB before automatic resizing.</p><img id="photoPreview" class="hidden" alt="Profile picture preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--line)"><label for="regPassword">Create password (12 characters minimum)</label><input id="regPassword" type="password" minlength="12" autocomplete="new-password" required><label for="regPasswordConfirm">Confirm password</label><input id="regPasswordConfirm" type="password" minlength="12" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
+<label for="regNationality">Nationality</label><select id="regNationality" required><option value="">Select nationality</option></select><label for="regPhone">Phone number</label><input id="regPhone" type="tel" required maxlength="40" autocomplete="tel"><label for="regPhoto">Profile picture (required)</label><input id="regPhoto" type="file" accept="image/*" required><p class="tiny">JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF or AVIF. Up to 5 MB.</p><img id="photoPreview" class="hidden" alt="Profile picture preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--line)"><label for="regPassword">Create password (12 characters minimum)</label><input id="regPassword" type="password" minlength="12" autocomplete="new-password" required><label for="regPasswordConfirm">Confirm password</label><input id="regPasswordConfirm" type="password" minlength="12" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
 </section>
 <section id="dashboard" class="hidden"><div class="card"><div class="bar"><div><p class="eyebrow" style="color:var(--brown)">YOUR ACCOUNT</p><h2 id="welcome">Welcome</h2></div><button class="secondary" id="logout">Sign out</button></div><div id="profile"></div></div>
 <div id="adminPanel" class="hidden">
@@ -372,7 +403,7 @@ const translations = {
 "Access your student account, or request registration. Student accounts created by self-registration must be approved by the school.":"ادخل إلى حسابك الطلابي أو اطلب التسجيل. يجب أن توافق المدرسة على حسابات الطلاب التي يتم إنشاؤها بالتسجيل الذاتي.",
 "Sign in":"تسجيل الدخول","Use your approved school account.":"استخدم حسابك المدرسي المعتمد.","Phone number or administrator email":"رقم الهاتف أو البريد الإلكتروني للإدارة","Password":"كلمة المرور",
 "Student registration":"تسجيل الطلاب","Register using your school details. The school must approve your account before you can sign in.":"سجّل باستخدام بياناتك المدرسية. يجب أن توافق المدرسة على حسابك قبل تسجيل الدخول.",
-"First name":"الاسم الأول","Father's name":"اسم الأب","Father name":"اسم الأب","Surname":"اسم العائلة","Date of birth":"تاريخ الميلاد","Current class":"الفصل الحالي","Gender":"الجنس","Select gender":"اختر الجنس","Nationality":"الجنسية","Select nationality":"اختر الجنسية","Select class":"اختر الصف","Phone number":"رقم الهاتف","Profile picture (required)":"الصورة الشخصية (مطلوبة)","JPEG or PNG, up to 5 MB before automatic resizing.":"صورة JPEG أو PNG، حتى 5 ميغابايت قبل تغيير الحجم تلقائيًا.",
+"First name":"الاسم الأول","Father's name":"اسم الأب","Father name":"اسم الأب","Surname":"اسم العائلة","Date of birth":"تاريخ الميلاد","Current class":"الفصل الحالي","Gender":"الجنس","Select gender":"اختر الجنس","Nationality":"الجنسية","Select nationality":"اختر الجنسية","Select class":"اختر الصف","Phone number":"رقم الهاتف","Profile picture (required)":"الصورة الشخصية (مطلوبة)","JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF or AVIF. Up to 5 MB.":"JPG أو PNG أو WebP أو GIF أو BMP أو TIFF أو HEIC أو HEIF أو AVIF. حتى 5 ميغابايت.",
 "Create password (12 characters minimum)":"إنشاء كلمة مرور (12 حرفًا على الأقل)","Confirm password":"تأكيد كلمة المرور","Submit registration":"إرسال طلب التسجيل",
 "YOUR ACCOUNT":"حسابك","Welcome":"مرحبًا","Sign out":"تسجيل الخروج","Pending and approved students":"الطلاب قيد الانتظار والطلاب المعتمدون",
 "Approve self-registrations or reject accounts. Only approved students can sign in.":"وافق على طلبات التسجيل الذاتي أو ارفض الحسابات. يمكن للطلاب المعتمدين فقط تسجيل الدخول.",
@@ -381,7 +412,7 @@ const translations = {
 "Not assigned":"غير محدد","Account status:":"حالة الحساب:","Exam results and attendance can be added when the school provides verified records.":"يمكن إضافة نتائج الامتحانات والحضور عندما توفر المدرسة سجلات موثقة.",
 "No student accounts yet.":"لا توجد حسابات طلاب حتى الآن.","No photo":"لا توجد صورة","No student ID":"لا يوجد رقم طالب","No class":"لا يوجد فصل","Approve":"اعتماد","Reject":"رفض",
 "Sign in successfully.":"تم تسجيل الدخول بنجاح.","Student status updated.":"تم تحديث حالة الطالب.","Student account created and approved.":"تم إنشاء حساب الطالب واعتماده.",
-"Passwords do not match.":"كلمتا المرور غير متطابقتين.","Choose a JPEG or PNG profile picture.":"اختر صورة شخصية بصيغة JPEG أو PNG.","Choose a picture smaller than 5 MB.":"اختر صورة أصغر من 5 ميغابايت.","Could not read that picture.":"تعذرت قراءة الصورة.","That picture could not be opened.":"تعذر فتح الصورة.",
+"Passwords do not match.":"كلمتا المرور غير متطابقتين.","Choose a valid image file up to 5 MB.":"اختر صورة صالحة بحجم لا يتجاوز 5 ميغابايت.","Choose a picture smaller than 5 MB.":"اختر صورة أصغر من 5 ميغابايت.","Could not read that picture.":"تعذرت قراءة الصورة.","That picture could not be opened.":"تعذر فتح الصورة.",
 "Please sign in.":"يرجى تسجيل الدخول.","Phone number or password is incorrect.":"رقم الهاتف أو كلمة المرور غير صحيحة.","Student registration is not open yet. Please contact the school.":"لم يُفتح تسجيل الطلاب بعد. يرجى التواصل مع المدرسة.","Refresh the page and try again.":"حدّث الصفحة وحاول مرة أخرى.","Unexpected server response.":"استجابة غير متوقعة من الخادم.","Request failed.":"فشل الطلب.","Portal is not configured yet.":"لم يتم إعداد البوابة بعد.","Portal setup is not complete yet. Please contact the website administrator. ":"لم يكتمل إعداد البوابة بعد. يرجى التواصل مع مسؤول الموقع. ",
 "Registration submitted. The school must approve your account before you can sign in.":"تم إرسال طلب التسجيل. يجب أن توافق المدرسة على حسابك قبل تسجيل الدخول.","DEMONSTRATION WEBSITE":"موقع تجريبي","— This is a proposed school website, not yet officially approved by the school. Please do not enter real student information.":"— هذا موقع مقترح للمدرسة ولم تتم الموافقة عليه رسميًا بعد. يرجى عدم إدخال معلومات حقيقية عن الطلاب.","This is a proposed school website, not yet officially approved by the school. Please do not enter real student information.":"هذا موقع مقترح للمدرسة ولم تتم الموافقة عليه رسميًا بعد. يرجى عدم إدخال معلومات حقيقية عن الطلاب.","This is a demonstration portal. Student registration will open only after the school officially approves the website.":"هذه بوابة تجريبية. سيتم فتح تسجيل الطلاب بعد موافقة المدرسة رسميًا على الموقع."
 };
@@ -423,7 +454,7 @@ async function api(path, data, method="POST"){const res=await fetch(path,{method
 function toggle(id,on){$(id).classList.toggle("hidden",!on);}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 async function loadCsrf(){const r=await fetch("/api/csrf");const d=await r.json();if(!r.ok)throw new Error(d.error||"Portal is not configured yet.");csrf=d.csrf_token;}
-async function imageToDataUrl(file){if(!file)throw new Error("Choose a profile picture first.");if(!file.type.startsWith("image/"))throw new Error("Choose an image file such as JPG, PNG, or WebP.");if(file.size>5*1024*1024)throw new Error("Choose a picture smaller than 5 MB.");const src=URL.createObjectURL(file);try{const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error("This photo format cannot be opened. Please save it as JPG or PNG and try again."));i.src=src;});const scale=Math.min(1,320/Math.max(img.width,img.height));const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Photo processing is unavailable in this browser. Try Chrome or Firefox.");ctx.drawImage(img,0,0,canvas.width,canvas.height);return canvas.toDataURL("image/jpeg",0.68);}finally{URL.revokeObjectURL(src);}}
+async function imageToDataUrl(file){if(!file)throw new Error("Choose a profile picture first.");if(!file.type.startsWith("image/"))throw new Error("Choose an image file.");if(file.size>5*1024*1024)throw new Error("Choose a picture smaller than 5 MB.");return await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Could not read that image file."));reader.readAsDataURL(file);});}
 $("regPhoto").addEventListener("change",async()=>{try{if($("regPhoto").files[0]){$("photoPreview").src=await imageToDataUrl($("regPhoto").files[0]);toggle("photoPreview",true);}}catch(e){toggle("photoPreview",false);showNotice(e.message,"error");}});
 function renderProfile(u){$("welcome").textContent="Welcome, "+u.full_name;$("profile").innerHTML=(u.profile_image?'<img src="'+u.profile_image+'" alt="Student profile picture" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--line)">':"")+'<p><strong>Email:</strong> '+esc(u.email)+'</p><p><strong>Student ID:</strong> '+esc(u.student_id||"Not assigned")+'</p><p><strong>Class:</strong> '+esc(u.class_name||"Not assigned")+'</p><p><strong>Account status:</strong> <span class="pill">'+esc(u.status)+'</span></p><p class="muted">Exam results and attendance can be added when the school provides verified records.</p>';}
 async function refreshStudents(){
