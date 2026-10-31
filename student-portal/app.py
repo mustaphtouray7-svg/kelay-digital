@@ -10,7 +10,6 @@ import psycopg
 from psycopg.rows import dict_row
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pillow_heif import register_heif_opener
-import pillow_avif
 from flask import Flask, request, session, jsonify, render_template_string, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
