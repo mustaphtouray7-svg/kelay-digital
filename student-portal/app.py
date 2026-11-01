@@ -197,7 +197,9 @@ register_heif_opener()
 
 def normalize_profile_image(value):
     """Decode common raster formats and store a compact, normalized JPEG."""
-    if not isinstance(value, str) or not value.startswith("data:image/") or ";base64," not in value:        return None    try:
+    if not isinstance(value, str) or not value.startswith("data:image/") or ";base64," not in value:
+        return None
+    try:
         _, encoded = value.split(",", 1)
         raw = base64.b64decode(encoded, validate=True)
         if not raw or len(raw) > 5 * 1024 * 1024:
@@ -217,8 +219,7 @@ def normalize_profile_image(value):
                 image = image.convert("RGB")
             image.thumbnail((480, 480), Image.Resampling.LANCZOS)
             output = BytesIO()
-            image.save(output, format="JPEG", quality=82, optimize=True)
-            return "data:image/jpeg;base64," + base64.b64encode(output.getvalue()).decode("ascii")
+            image.save(output, format="JPEG", quality=82, optimize=True)            return "data:image/jpeg;base64," + base64.b64encode(output.getvalue()).decode("ascii")
     except (ValueError, binascii.Error, UnidentifiedImageError, OSError, Image.DecompressionBombError):
         return None
 
@@ -437,8 +438,7 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 </section>
 <section id="passwordHelp" class="card hidden" style="max-width:620px;margin:0 auto"><h2>Password help</h2><p>If you are an administrator, use the secure one-time reset link provided by the school website administrator. If you are a student, contact the school administrator to verify your identity and reset your account password. For security, this page does not reveal or email existing passwords.</p><button type="button" class="secondary" id="closePasswordHelp">Back to sign in</button></section>
 <section id="registrationSuccess" class="card hidden" style="max-width:680px;margin:0 auto;text-align:center;padding:clamp(28px,6vw,56px)"><div aria-hidden="true" style="font-size:48px;color:#23572b">✓</div><h2>Application submitted successfully!</h2><p class="muted" style="font-size:16px">Your student registration has been received. The school will review your application. You can sign in after the school approves your account.</p><p class="muted">Please keep your phone number and password safe. You do not need to submit the form again.</p><button type="button" id="backToSignIn">Back to sign in</button></section>
-<section id="dashboard" class="hidden"><div class="card"><div class="bar"><div><p class="eyebrow" style="color:var(--brown)">YOUR ACCOUNT</p><h2 id="welcome">Welcome</h2></div><button class="secondary" id="logout">Sign out</button></div><div id="profile"></div></div>
-<div id="adminPanel" class="hidden">
+<section id="dashboard" class="hidden"><div class="card"><div class="bar"><div><p class="eyebrow" style="color:var(--brown)">YOUR ACCOUNT</p><h2 id="welcome">Welcome</h2></div><button class="secondary" id="logout">Sign out</button></div><div id="profile"></div></div><div id="adminPanel" class="hidden">
 <div class="card" style="margin-top:18px"><h2>Student records</h2><p class="muted">Review each student's name and nationality, and assign a unique student ID. You can also approve or reject accounts.</p><div id="studentList">Loading student records…</div></div>
 <div class="card" style="margin-top:18px"><h2>Create a student account</h2><form id="createStudent"><label for="newName">First name</label><input id="newName" required maxlength="120"><label for="newFather">Father name</label><input id="newFather" required maxlength="120"><label for="newSurname">Surname</label><input id="newSurname" required maxlength="120"><label for="newArabic">Full name in Arabic</label><input id="newArabic" required maxlength="200" dir="rtl"><label for="newPhone">Phone number</label><input id="newPhone" type="tel" required maxlength="40"><label for="newEmail">Email</label><input id="newEmail" type="email" required maxlength="254"><label for="newId">Student ID</label><input id="newId" maxlength="40"><label for="newClass">Class</label><input id="newClass" required maxlength="80"><label for="newGrade">Grade</label><input id="newGrade" required maxlength="80"><label for="newPassword">Temporary password (6 characters minimum)</label><input id="newPassword" type="password" minlength="6" required><button type="submit">Create approved account</button></form></div></div>
 </section>
