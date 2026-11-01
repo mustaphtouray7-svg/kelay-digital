@@ -70,6 +70,7 @@ def init_db():
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS nationality VARCHAR(100) NOT NULL DEFAULT ''")
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS date_of_birth DATE")
         conn.execute("CREATE INDEX IF NOT EXISTS portal_users_status_idx ON portal_users(status)")
+        conn.execute("CREATE TABLE IF NOT EXISTS student_id_counters (admission_year INTEGER PRIMARY KEY, last_number INTEGER NOT NULL)")
         conn.execute("""CREATE TABLE IF NOT EXISTS admin_password_reset_uses (token_hash TEXT PRIMARY KEY, used_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
         conn.execute("""CREATE TABLE IF NOT EXISTS student_activity (
             id BIGSERIAL PRIMARY KEY,
@@ -121,6 +122,11 @@ def admin_required(fn):
             return jsonify({"error": "Administrator access required."}), 403
         return fn(*args, **kwargs)
     return wrapped
+
+def generate_student_id(conn, admission_year=None):
+    year = int(admission_year or datetime.now().year)
+    row = conn.execute("INSERT INTO student_id_counters(admission_year,last_number) VALUES (%s,1) ON CONFLICT(admission_year) DO UPDATE SET last_number=student_id_counters.last_number+1 RETURNING last_number", (year,)).fetchone()
+    return f"LKI-{year}-{row['last_number']:04d}"
 
 def user_public(row):
     return {k: row.get(k) for k in ("id", "full_name", "father_name", "guardian_name", "surname", "arabic_name", "phone", "email", "student_id", "role", "status", "class_name", "grade", "date_of_birth", "profile_image", "gender", "nationality", "created_at")}
@@ -381,6 +387,8 @@ def create_student():
         return jsonify({"error": "Temporary password must be at least 6 characters."}), 400
     try:
         with db() as conn:
+            if not student_id:
+                student_id = generate_student_id(conn)
             row = conn.execute(
                 "INSERT INTO portal_users(full_name,father_name,surname,arabic_name,phone,email,student_id,password_hash,status,class_name,grade,approved_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'approved',%s,%s,NOW()) RETURNING *",
                 (name, father_name, surname, arabic_name, phone, email, student_id, generate_password_hash(password), class_name, grade)
