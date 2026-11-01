@@ -71,6 +71,15 @@ def init_db():
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS date_of_birth DATE")
         conn.execute("CREATE INDEX IF NOT EXISTS portal_users_status_idx ON portal_users(status)")
         conn.execute("""CREATE TABLE IF NOT EXISTS admin_password_reset_uses (token_hash TEXT PRIMARY KEY, used_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS student_activity (
+            id BIGSERIAL PRIMARY KEY,
+            student_user_id BIGINT NOT NULL REFERENCES portal_users(id) ON DELETE CASCADE,
+            actor_user_id BIGINT REFERENCES portal_users(id) ON DELETE SET NULL,
+            activity_type VARCHAR(40) NOT NULL,
+            description VARCHAR(240) NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )""")
+        conn.execute("CREATE INDEX IF NOT EXISTS student_activity_student_created_idx ON student_activity(student_user_id, created_at DESC)")
         conn.commit()
 
 @app.before_request
@@ -292,6 +301,13 @@ def login():
     session["user_id"], session["role"], session["full_name"] = row["id"], row["role"], row["full_name"]
     session.permanent = True
     csrf_token()
+    if row["role"] == "student":
+        with db() as conn:
+            conn.execute(
+                "INSERT INTO student_activity(student_user_id,actor_user_id,activity_type,description) VALUES (%s,%s,'sign_in','Student signed in')",
+                (row["id"], row["id"])
+            )
+            conn.commit()
     return jsonify({"user": user_public(row), "csrf_token": session["_csrf"]})
 
 @app.post("/api/logout")
@@ -317,6 +333,31 @@ def admin_students():
     with db() as conn:
         rows = conn.execute("SELECT * FROM portal_users WHERE role='student' ORDER BY created_at DESC LIMIT 500").fetchall()
     return jsonify({"students": [user_public(row) for row in rows]})
+
+@app.get("/api/admin/students/<int:user_id>/overview")
+@admin_required
+def admin_student_overview(user_id):
+    with db() as conn:
+        student = conn.execute("SELECT * FROM portal_users WHERE id=%s AND role='student'", (user_id,)).fetchone()
+        if not student:
+            return jsonify({"error": "Student account not found."}), 404
+        activities = conn.execute("""
+            SELECT a.activity_type, a.description, a.created_at,
+                   COALESCE(actor.full_name, 'System') AS actor_name
+            FROM student_activity a
+            LEFT JOIN portal_users actor ON actor.id=a.actor_user_id
+            WHERE a.student_user_id=%s
+            ORDER BY a.created_at DESC LIMIT 300
+        """, (user_id,)).fetchall()
+    return jsonify({
+        "student": user_public(student),
+        "activities": [{
+            "activity_type": a["activity_type"],
+            "description": a["description"],
+            "actor_name": a["actor_name"],
+            "created_at": a["created_at"].isoformat() if a["created_at"] else None
+        } for a in activities]
+    })
 
 @app.post("/api/admin/create-student")
 @admin_required
@@ -440,7 +481,13 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 <section id="passwordHelp" class="card hidden" style="max-width:620px;margin:0 auto"><h2>Password help</h2><p>If you are an administrator, use the secure one-time reset link provided by the school website administrator. If you are a student, contact the school administrator to verify your identity and reset your account password. For security, this page does not reveal or email existing passwords.</p><button type="button" class="secondary" id="closePasswordHelp">Back to sign in</button></section>
 <section id="registrationSuccess" class="card hidden" style="max-width:680px;margin:0 auto;text-align:center;padding:clamp(28px,6vw,56px)"><div aria-hidden="true" style="font-size:48px;color:#23572b">✓</div><h2>Application submitted successfully!</h2><p class="muted" style="font-size:16px">Your student registration has been received. The school will review your application. You can sign in after the school approves your account.</p><p class="muted">Please keep your phone number and password safe. You do not need to submit the form again.</p><button type="button" id="backToSignIn">Back to sign in</button></section>
 <section id="dashboard" class="hidden"><div class="card"><div class="bar"><div><p class="eyebrow" style="color:var(--brown)">YOUR ACCOUNT</p><h2 id="welcome">Welcome</h2></div><button class="secondary" id="logout">Sign out</button></div><div id="profile"></div></div><div id="adminPanel" class="hidden">
-<div class="card" style="margin-top:18px"><h2>Student records</h2><p class="muted">Review each student's name and nationality, and assign a unique student ID. You can also approve or reject accounts.</p><div id="studentList">Loading student records…</div></div>
+<div class="card" style="margin-top:18px"><h2>Student records</h2><p class="muted">Review each student's name and nationality, and assign a unique student ID. You can also approve or reject accounts.</p><div id="studentList">Loading student records…</div>
+<div id="studentPage" class="card hidden" style="margin-top:18px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <h3>Student account overview</h3><button type="button" id="closeStudentPage">Back to students</button>
+  </div>
+  <div id="studentOverview"></div>
+</div></div>
 <div class="card" style="margin-top:18px"><h2>Create a student account</h2><form id="createStudent"><label for="newName">First name</label><input id="newName" required maxlength="120"><label for="newFather">Father name</label><input id="newFather" required maxlength="120"><label for="newSurname">Surname</label><input id="newSurname" required maxlength="120"><label for="newArabic">Full name in Arabic</label><input id="newArabic" required maxlength="200" dir="rtl"><label for="newPhone">Phone number</label><input id="newPhone" type="tel" required maxlength="40"><label for="newEmail">Email</label><input id="newEmail" type="email" required maxlength="254"><label for="newId">Student ID</label><input id="newId" maxlength="40"><label for="newClass">Class</label><input id="newClass" required maxlength="80"><label for="newGrade">Grade</label><input id="newGrade" required maxlength="80"><label for="newPassword">Temporary password (6 characters minimum)</label><input id="newPassword" type="password" minlength="6" required><button type="submit">Create approved account</button></form></div></div>
 </section>
 </main><footer>Alh. Lalo Kanteh Islamic Institute · Tabokoto, The Gambia</footer>
@@ -539,12 +586,25 @@ async function refreshStudents(){
   const columns=["Profile","Full name","Arabic name","Father's name","Parent/guardian","Surname","Phone","Email","Student ID","Date of birth","Gender","Nationality","Class","Grade","Account status","Registered","Actions"];
   list.innerHTML='<div class="admin-table-wrap"><table class="admin-students-table"><thead><tr>'+columns.map(c=>'<th>'+c+'</th>').join("")+'</tr></thead><tbody>'+d.students.map(s=>{
     const photo=s.profile_image?'<img src="'+s.profile_image+'" alt="Profile picture of '+esc(s.full_name)+'" class="admin-student-photo">':'<span class="admin-no-photo">No photo</span>';
-    const cells=[photo,esc(s.full_name),esc(s.arabic_name||"—"),esc(s.father_name||"—"),esc(s.guardian_name||"—"),esc(s.surname||"—"),esc(s.phone||"—"),esc(s.email||"—"),'<input aria-label="Student ID for '+esc(s.full_name)+'" data-student-id="'+s.id+'" value="'+esc(s.student_id||"")+'" maxlength="40" placeholder="Student ID">',esc(s.date_of_birth||"—"),esc(s.gender||"—"),esc(s.nationality||"—"),esc(s.class_name||"—"),esc(s.grade||"—"),'<span class="admin-status">'+esc(s.status)+'</span>',esc(s.created_at?new Date(s.created_at).toLocaleString():"—"),'<div class="admin-actions"><button type="button" data-save-id="'+s.id+'">Save ID</button>'+(s.status!=="approved"?'<button type="button" data-id="'+s.id+'" data-status="approved">Approve</button>':"")+(s.status!=="rejected"?'<button type="button" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div>'];
+    const cells=[photo,esc(s.full_name),esc(s.arabic_name||"—"),esc(s.father_name||"—"),esc(s.guardian_name||"—"),esc(s.surname||"—"),esc(s.phone||"—"),esc(s.email||"—"),'<input aria-label="Student ID for '+esc(s.full_name)+'" data-student-id="'+s.id+'" value="'+esc(s.student_id||"")+'" maxlength="40" placeholder="Student ID">',esc(s.date_of_birth||"—"),esc(s.gender||"—"),esc(s.nationality||"—"),esc(s.class_name||"—"),esc(s.grade||"—"),'<span class="admin-status">'+esc(s.status)+'</span>',esc(s.created_at?new Date(s.created_at).toLocaleString():"—"),'<div class="admin-actions"><button type="button" data-open-student="'+s.id+'">Open student page</button><button type="button" data-save-id="'+s.id+'">Save ID</button>'+(s.status!=="approved"?'<button type="button" data-id="'+s.id+'" data-status="approved">Approve</button>':"")+(s.status!=="rejected"?'<button type="button" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div>'];
     return '<tr>'+cells.map((v,n)=>'<td'+(n===2?' dir="rtl"':"")+'>'+v+'</td>').join("")+'</tr>';
   }).join("")+'</tbody></table></div><p class="admin-security-note">Passwords are securely hashed and cannot be viewed, including by administrators. Use a password reset process if a student needs a new password.</p>';
+  list.querySelectorAll("button[data-open-student]").forEach(b=>b.addEventListener("click",async()=>{try{await openStudentPage(b.dataset.openStudent);}catch(e){showNotice(e.message,"error");}}));
   list.querySelectorAll("button[data-save-id]").forEach(b=>b.addEventListener("click",async()=>{const field=list.querySelector('input[data-student-id="'+b.dataset.saveId+'"]');try{await api("/api/admin/students/"+b.dataset.saveId+"/student-id",{student_id:field.value});showNotice("Student ID saved.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));
   list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));
 }
+async function openStudentPage(id){
+  const d=await api("/api/admin/students/"+id+"/overview",null,"GET");
+  const u=d.student;
+  const fields=[["Full name",u.full_name],["Arabic name",u.arabic_name],["Father's name",u.father_name],["Parent/guardian",u.guardian_name],["Surname",u.surname],["Phone",u.phone],["Email",u.email],["Student ID",u.student_id||"Not assigned"],["Date of birth",u.date_of_birth],["Gender",u.gender],["Nationality",u.nationality],["Class",u.class_name],["Grade",u.grade],["Account status",u.status],["Registration date",u.created_at?new Date(u.created_at).toLocaleString():"—"]];
+  const photo=u.profile_image?'<img src="'+u.profile_image+'" alt="Student profile" style="width:104px;height:104px;object-fit:cover;border-radius:50%;border:2px solid var(--line)">':"";
+  const profile='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:12px 0">'+photo+'<div><h3>'+esc(u.full_name)+'</h3><p class="muted">Same account details available on the student dashboard</p></div></div><div class="student-overview-grid">'+fields.map(([k,v])=>'<div><small class="muted">'+esc(k)+'</small><p>'+esc(v||"—")+'</p></div>').join("")+'</div><p class="muted">Exam results and attendance are not currently stored in this portal.</p>';
+  const history=d.activities.length?d.activities.map(a=>'<div style="padding:12px 0;border-bottom:1px solid var(--line)"><strong>'+esc(a.description)+'</strong><p class="muted">'+esc(a.activity_type)+' · '+esc(a.actor_name)+' · '+esc(a.created_at?new Date(a.created_at).toLocaleString():"")+'</p></div>').join(""):'<p class="muted">No activity has been recorded for this student yet. Activity history starts when tracking is enabled.</p>';
+  $("studentOverview").innerHTML=profile+'<h3>Activity history</h3>'+history+'<p class="admin-security-note">This history contains recorded events only. It cannot show actions from before activity tracking was enabled. Passwords and password hashes are never displayed.</p>';
+  toggle("studentPage",true);
+  $("studentPage").scrollIntoView({behavior:"smooth",block:"start"});
+}
+$("closeStudentPage").addEventListener("click",()=>toggle("studentPage",false));
 async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin)await refreshStudents();}
 async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else if(!sd.database_ready){throw new Error("The student database is not ready. Please contact the website administrator.");}else if(sd.setup_needed){toggle("auth",false);toggle("setup",true);}else{toggle("setup",false);toggle("auth",true);}}catch(e){toggle("setup",false);toggle("auth",true);showNotice("Portal setup is not complete yet. "+e.message,"error");}}
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/setup-admin",{setup_key:$("setupKey").value,full_name:$("setupName").value,email:$("setupEmail").value,password:$("setupPassword").value});e.target.reset();toggle("setup",false);await showUser(d.user);showNotice("First administrator account created successfully.","success");}catch(err){showNotice(err.message,"error");}});
