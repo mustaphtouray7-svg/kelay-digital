@@ -25,6 +25,8 @@ app.config.update(
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 SCHOOL_NAME = "Alh. Lalo Kanteh Islamic Institute"
 SETUP_KEY = os.environ.get("PORTAL_SETUP_KEY", "")
+ADMIN_RESET_TOKEN = os.environ.get("ADMIN_PASSWORD_RESET_TOKEN", "")
+ADMIN_EMAIL = "Lalokanteh1998@gmail.com".lower()
 REGISTRATION_OPEN = os.environ.get("STUDENT_REGISTRATION_OPEN", "false").lower() == "true"
 DEMO_MODE = os.environ.get("PORTAL_DEMO_MODE", "true").lower() == "true"
 
@@ -68,6 +70,7 @@ def init_db():
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS nationality VARCHAR(100) NOT NULL DEFAULT ''")
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS date_of_birth DATE")
         conn.execute("CREATE INDEX IF NOT EXISTS portal_users_status_idx ON portal_users(status)")
+        conn.execute("""CREATE TABLE IF NOT EXISTS admin_password_reset_uses (token_hash TEXT PRIMARY KEY, used_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
         conn.commit()
 
 @app.before_request
@@ -164,6 +167,31 @@ def setup_admin():
     session["user_id"], session["role"], session["full_name"] = row["id"], "admin", row["full_name"]
     session.permanent = True
     return jsonify({"user": user_public(row)}), 201
+
+@app.route("/admin-password-reset/<token>", methods=["GET", "POST"])
+def admin_password_reset(token):
+    if not ADMIN_RESET_TOKEN or not secrets.compare_digest(token, ADMIN_RESET_TOKEN):
+        return "This password reset link is invalid or expired.", 403
+    if request.method == "GET":
+        return """<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin password reset</title><body style="font-family:Arial;max-width:420px;margin:50px auto;padding:20px"><h2>Reset school administrator password</h2><form method="post"><label>New password (at least 10 characters)<input name="password" type="password" minlength="10" required style="display:block;width:100%;padding:12px;margin:10px 0"></label><label>Confirm new password<input name="confirm" type="password" minlength="10" required style="display:block;width:100%;padding:12px;margin:10px 0"></label><button style="padding:12px 18px">Set new password</button></form></body></html>"""
+    password = request.form.get("password", "")
+    confirm = request.form.get("confirm", "")
+    if len(password) < 10 or password != confirm:
+        return "Passwords must match and contain at least 10 characters.", 400
+    token_hash = __import__("hashlib").sha256(token.encode("utf-8")).hexdigest()
+    with db() as conn:
+        try:
+            conn.execute("INSERT INTO admin_password_reset_uses(token_hash) VALUES (%s)", (token_hash,))
+        except psycopg.errors.UniqueViolation:
+            conn.rollback()
+            return "This password reset link has already been used.", 410
+        admin = conn.execute("SELECT id FROM portal_users WHERE role='admin' AND lower(email)=lower(%s) LIMIT 1", (ADMIN_EMAIL,)).fetchone()
+        if not admin:
+            conn.rollback()
+            return "The school administrator account was not found. Contact the portal administrator.", 404
+        conn.execute("UPDATE portal_users SET password_hash=%s WHERE id=%s", (generate_password_hash(password), admin["id"]))
+        conn.commit()
+    return "Administrator password updated successfully. You can now sign in to the student portal."
 
 register_heif_opener()
 
