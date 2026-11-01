@@ -40,6 +40,7 @@ def init_db():
                 id BIGSERIAL PRIMARY KEY,
                 full_name VARCHAR(120) NOT NULL,
                 father_name VARCHAR(120) NOT NULL DEFAULT '',
+                guardian_name VARCHAR(120) NOT NULL DEFAULT '',
                 surname VARCHAR(120) NOT NULL DEFAULT '',
                 arabic_name VARCHAR(200) NOT NULL DEFAULT '',
                 phone VARCHAR(40) NOT NULL DEFAULT '',
@@ -58,6 +59,7 @@ def init_db():
         """)
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS profile_image TEXT NOT NULL DEFAULT ''")
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS father_name VARCHAR(120) NOT NULL DEFAULT ''")
+        conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(120) NOT NULL DEFAULT ''")
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS surname VARCHAR(120) NOT NULL DEFAULT ''")
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS arabic_name VARCHAR(200) NOT NULL DEFAULT ''")
         conn.execute("ALTER TABLE portal_users ADD COLUMN IF NOT EXISTS phone VARCHAR(40) NOT NULL DEFAULT ''")
@@ -109,7 +111,7 @@ def admin_required(fn):
     return wrapped
 
 def user_public(row):
-    return {k: row.get(k) for k in ("id", "full_name", "father_name", "surname", "arabic_name", "phone", "email", "student_id", "role", "status", "class_name", "grade", "date_of_birth", "profile_image", "gender", "nationality", "created_at")}
+    return {k: row.get(k) for k in ("id", "full_name", "father_name", "guardian_name", "surname", "arabic_name", "phone", "email", "student_id", "role", "status", "class_name", "grade", "date_of_birth", "profile_image", "gender", "nationality", "created_at")}
 
 @app.get("/health")
 def health():
@@ -204,6 +206,7 @@ def register():
     data = request.json or {}
     name = str(data.get("full_name", "")).strip()
     father_name = str(data.get("father_name", "")).strip()
+    guardian_name = str(data.get("guardian_name", "")).strip()
     surname = str(data.get("surname", "")).strip()
     phone = str(data.get("phone", "")).strip()
     date_of_birth = str(data.get("date_of_birth", "")).strip()
@@ -215,9 +218,9 @@ def register():
     profile_image = normalize_profile_image(data.get("profile_image", ""))
     if not profile_image:
         return jsonify({"error": "Choose a valid image file up to 5 MB. Supported formats include JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF and AVIF."}), 400
-    if not all([name, father_name, surname, phone, date_of_birth, class_name, gender, nationality]):
+    if not all([name, father_name, guardian_name, surname, phone, date_of_birth, class_name, gender, nationality]):
         return jsonify({"error": "Complete your name, father's name, surname, date of birth, class, and phone number."}), 400
-    if len(name) > 120 or len(father_name) > 120 or len(surname) > 120 or len(phone) > 40 or len(class_name) > 80:
+    if len(name) > 120 or len(father_name) > 120 or len(guardian_name) > 120 or len(surname) > 120 or len(phone) > 40 or len(class_name) > 80:
         return jsonify({"error": "One or more fields are too long."}), 400
     if password != password_confirm:
         return jsonify({"error": "Passwords do not match."}), 400
@@ -236,8 +239,8 @@ def register():
             if duplicate:
                 return jsonify({"error": "This phone number already has a student account. Contact the school."}), 409
             row = conn.execute(
-                "INSERT INTO portal_users(full_name,father_name,surname,phone,email,password_hash,status,class_name,date_of_birth,profile_image,gender,nationality) VALUES (%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s,%s) RETURNING id",
-                (name, father_name, surname, phone, email, generate_password_hash(password), class_name, dob, profile_image, gender, nationality)
+                "INSERT INTO portal_users(full_name,father_name,guardian_name,surname,phone,email,password_hash,status,class_name,date_of_birth,profile_image,gender,nationality) VALUES (%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s,%s) RETURNING id",
+                (name, father_name, guardian_name, surname, phone, email, generate_password_hash(password), class_name, dob, profile_image, gender, nationality)
             ).fetchone()
             conn.commit()
         return jsonify({"message": "Registration submitted. The school must approve your account before you can sign in.", "id": row["id"]}), 201
@@ -382,7 +385,7 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 <section id="auth" class="layout">
 <div class="card"><h2>Sign in</h2><p class="muted">Use your approved school account.</p>
 <form id="loginForm"><label for="loginEmail">Phone number or administrator email</label><input id="loginEmail" autocomplete="username" required maxlength="254"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form></div>
-<div class="card"><h2>Student registration</h2><p class="muted">Register using your school details. The school must approve your account before you can sign in.</p><form id="registerForm"><label for="regName">First name</label><input id="regName" required maxlength="120"><label for="regFather">Father's name</label><input id="regFather" required maxlength="120"><label for="regSurname">Surname</label><input id="regSurname" required maxlength="120"><label for="regDob">Date of birth</label><input id="regDob" type="date" required><label for="regClass">Current class</label><select id="regClass" required><option value="">Select class</option><option>Nursery 1</option><option>Nursery 2</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
+<div class="card"><h2>Student registration</h2><p class="muted">Register using your school details. The school must approve your account before you can sign in.</p><form id="registerForm"><label for="regName">First name</label><input id="regName" required maxlength="120"><label for="regFather">Father's name</label><input id="regFather" required maxlength="120"><label for="regGuardian">Parent/Guardian's name</label><input id="regGuardian" required maxlength="120"><label for="regSurname">Surname</label><input id="regSurname" required maxlength="120"><label for="regDob">Date of birth</label><input id="regDob" type="date" required><label for="regClass">Current class</label><select id="regClass" required><option value="">Select class</option><option>Nursery 1</option><option>Nursery 2</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
 <label for="regGender">Gender</label><select id="regGender" required><option value="">Select gender</option><option value="Male">Male</option><option value="Female">Female</option></select>
 <label for="regNationality">Nationality</label><select id="regNationality" required><option value="">Select nationality</option></select><label for="regPhone">Phone number</label><input id="regPhone" type="tel" required maxlength="40" autocomplete="tel"><label for="regPhoto">Profile picture (required)</label><input id="regPhoto" type="file" accept="image/*" required><p class="tiny">JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF or AVIF. Up to 5 MB.</p><img id="photoPreview" class="hidden" alt="Profile picture preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--line)"><label for="regPassword">Create password (6 characters minimum)</label><input id="regPassword" type="password" minlength="6" autocomplete="new-password" required><label for="regPasswordConfirm">Confirm password</label><input id="regPasswordConfirm" type="password" minlength="6" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
 </section>
@@ -404,7 +407,7 @@ const translations = {
 "Sign in":"تسجيل الدخول","Use your approved school account.":"استخدم حسابك المدرسي المعتمد.","Phone number or administrator email":"رقم الهاتف أو البريد الإلكتروني للإدارة","Password":"كلمة المرور",
 "Application submitted successfully!":"تم إرسال طلب التسجيل بنجاح!","Your student registration has been received. The school will review your application. You can sign in after the school approves your account.":"تم استلام طلب تسجيلك. ستراجع المدرسة طلبك، ويمكنك تسجيل الدخول بعد موافقة المدرسة على حسابك.","Please keep your phone number and password safe. You do not need to submit the form again.":"يرجى الاحتفاظ برقم هاتفك وكلمة المرور. لا تحتاج إلى إرسال الطلب مرة أخرى.","Back to sign in":"العودة إلى تسجيل الدخول",
 "Student registration":"تسجيل الطلاب","Register using your school details. The school must approve your account before you can sign in.":"سجّل باستخدام بياناتك المدرسية. يجب أن توافق المدرسة على حسابك قبل تسجيل الدخول.",
-"First name":"الاسم الأول","Father's name":"اسم الأب","Father name":"اسم الأب","Surname":"اسم العائلة","Date of birth":"تاريخ الميلاد","Current class":"الفصل الحالي","Gender":"الجنس","Select gender":"اختر الجنس","Nationality":"الجنسية","Select nationality":"اختر الجنسية","Select class":"اختر الصف","Phone number":"رقم الهاتف","Profile picture (required)":"الصورة الشخصية (مطلوبة)","JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF or AVIF. Up to 5 MB.":"JPG أو PNG أو WebP أو GIF أو BMP أو TIFF أو HEIC أو HEIF أو AVIF. حتى 5 ميغابايت.",
+"First name":"الاسم الأول","Father's name":"اسم الأب","Father name":"اسم الأب","Parent/Guardian's name":"اسم ولي الأمر","Surname":"اسم العائلة","Date of birth":"تاريخ الميلاد","Current class":"الفصل الحالي","Gender":"الجنس","Select gender":"اختر الجنس","Nationality":"الجنسية","Select nationality":"اختر الجنسية","Select class":"اختر الصف","Phone number":"رقم الهاتف","Profile picture (required)":"الصورة الشخصية (مطلوبة)","JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF or AVIF. Up to 5 MB.":"JPG أو PNG أو WebP أو GIF أو BMP أو TIFF أو HEIC أو HEIF أو AVIF. حتى 5 ميغابايت.",
 "Create password (6 characters minimum)":"إنشاء كلمة مرور (6 أحرف على الأقل)","Confirm password":"تأكيد كلمة المرور","Submit registration":"إرسال طلب التسجيل",
 "YOUR ACCOUNT":"حسابك","Welcome":"مرحبًا","Sign out":"تسجيل الخروج","Pending and approved students":"الطلاب قيد الانتظار والطلاب المعتمدون",
 "Approve self-registrations or reject accounts. Only approved students can sign in.":"وافق على طلبات التسجيل الذاتي أو ارفض الحسابات. يمكن للطلاب المعتمدين فقط تسجيل الدخول.",
@@ -470,7 +473,7 @@ async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("da
 async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else if(!sd.database_ready){throw new Error("The student database is not ready. Please contact the website administrator.");}else if(sd.setup_needed){toggle("auth",false);toggle("setup",true);}else{toggle("setup",false);toggle("auth",true);}}catch(e){toggle("setup",false);toggle("auth",true);showNotice("Portal setup is not complete yet. "+e.message,"error");}}
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/setup-admin",{setup_key:$("setupKey").value,full_name:$("setupName").value,email:$("setupEmail").value,password:$("setupPassword").value});e.target.reset();toggle("setup",false);await showUser(d.user);showNotice("First administrator account created successfully.","success");}catch(err){showNotice(err.message,"error");}});
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/login",{login:$("loginEmail").value,password:$("loginPassword").value});await showUser(d.user);showNotice("Signed in successfully.","success");}catch(err){showNotice(err.message,"error");}});
-$("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const photo=await imageToDataUrl($("regPhoto").files[0]);if($("regPassword").value!==$("regPasswordConfirm").value)throw new Error("Passwords do not match.");const d=await api("/api/register",{full_name:$("regName").value,father_name:$("regFather").value,surname:$("regSurname").value,date_of_birth:$("regDob").value,phone:$("regPhone").value,class_name:$("regClass").value,gender:$("regGender").value,nationality:$("regNationality").value,password:$("regPassword").value,password_confirm:$("regPasswordConfirm").value,profile_image:photo});e.target.reset();toggle("photoPreview",false);toggle("auth",false);toggle("registrationSuccess",true);window.scrollTo({top:0,behavior:"smooth"});}catch(err){showNotice(err.message,"error");}});
+$("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const photo=await imageToDataUrl($("regPhoto").files[0]);if($("regPassword").value!==$("regPasswordConfirm").value)throw new Error("Passwords do not match.");const d=await api("/api/register",{full_name:$("regName").value,father_name:$("regFather").value,guardian_name:$("regGuardian").value,surname:$("regSurname").value,date_of_birth:$("regDob").value,phone:$("regPhone").value,class_name:$("regClass").value,gender:$("regGender").value,nationality:$("regNationality").value,password:$("regPassword").value,password_confirm:$("regPasswordConfirm").value,profile_image:photo});e.target.reset();toggle("photoPreview",false);toggle("auth",false);toggle("registrationSuccess",true);window.scrollTo({top:0,behavior:"smooth"});}catch(err){showNotice(err.message,"error");}});
 $("backToSignIn").addEventListener("click",()=>{toggle("registrationSuccess",false);toggle("auth",true);window.scrollTo({top:0,behavior:"smooth"});});
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{});location.reload();}catch(e){showNotice(e.message,"error");}});
 $("createStudent").addEventListener("submit",async e=>{e.preventDefault();try{await api("/api/admin/create-student",{full_name:$("newName").value,father_name:$("newFather").value,surname:$("newSurname").value,arabic_name:$("newArabic").value,phone:$("newPhone").value,email:$("newEmail").value,student_id:$("newId").value,class_name:$("newClass").value,grade:$("newGrade").value,password:$("newPassword").value});e.target.reset();showNotice("Student account created and approved.","success");await refreshStudents();}catch(err){showNotice(err.message,"error");}});
