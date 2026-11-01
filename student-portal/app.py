@@ -197,8 +197,7 @@ register_heif_opener()
 
 def normalize_profile_image(value):
     """Decode common raster formats and store a compact, normalized JPEG."""
-    if not isinstance(value, str) or not value.startswith("data:image/") or ";base64," not in value:
-        return None
+    if not isinstance(value, str) or not value.startswith("data:image/") or ";base64," not in value:        return None
     try:
         _, encoded = value.split(",", 1)
         raw = base64.b64decode(encoded, validate=True)
@@ -397,8 +396,7 @@ PAGE = r'''<!doctype html>
 header{background:#fff;border-bottom:1px solid var(--line);padding:16px 5%;display:flex;align-items:center;justify-content:space-between;gap:12px}.header-actions{display:flex;align-items:center;gap:12px}.language-toggle{margin:0;white-space:nowrap}
 .brand{font-weight:800;color:var(--brown);text-decoration:none;letter-spacing:.02em}.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:.1em}
 main{max-width:1100px;margin:0 auto;padding:36px 18px 60px}.hero{background:linear-gradient(90deg,rgba(54,35,23,.82),rgba(54,35,23,.42)),url('https://i.ibb.co/vCJ0SBKH/IMG-20260924-WA0131.jpg') center/cover no-repeat;background-color:var(--brown);color:white;border-radius:22px;padding:clamp(24px,5vw,52px);margin-bottom:24px;min-height:250px;display:flex;flex-direction:column;justify-content:center}
-.eyebrow{font-size:12px;letter-spacing:.16em;font-weight:700;color:#e8d5bd}.hero h1{font-size:clamp(28px,5vw,44px);line-height:1.12;margin:12px 0}.hero p{max-width:650px;color:#f4e9dd}
-.layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 8px 28px #5a3d2b0b}
+.eyebrow{font-size:12px;letter-spacing:.16em;font-weight:700;color:#e8d5bd}.hero h1{font-size:clamp(28px,5vw,44px);line-height:1.12;margin:12px 0}.hero p{max-width:650px;color:#f4e9dd}.layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 8px 28px #5a3d2b0b}
 h2{margin:0 0 8px;font-size:23px}h3{margin:0 0 12px}label{display:block;font-weight:700;font-size:13px;margin:12px 0 5px}
 input,select{width:100%;padding:12px;border:1px solid #d8c7b2;border-radius:9px;font:inherit;background:#fff}
 .password-field{position:relative}.password-field input{padding-right:52px}.password-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);margin:0;padding:7px 9px;background:transparent;color:var(--brown);border:0;font-size:18px;line-height:1}.password-toggle:focus{outline:2px solid var(--brown);outline-offset:2px}button,.button{border:0;border-radius:10px;background:var(--brown);color:white;padding:12px 16px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;margin-top:14px}
@@ -518,7 +516,17 @@ async function refreshStudents(){
   const d=await api("/api/admin/students",null,"GET");
   const list=$("studentList");
   if(!d.students.length){list.textContent="No student accounts yet.";return;}
-  list.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px"><thead><tr><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line)">Student name</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line)">Nationality</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line)">Student ID</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line)">Status / actions</th></tr></thead><tbody>'+d.students.map(s=>'<tr><td style="padding:10px;border-bottom:1px solid var(--line)">'+esc(s.full_name)+'</td><td style="padding:10px;border-bottom:1px solid var(--line)">'+esc(s.nationality||"—")+'</td><td style="padding:10px;border-bottom:1px solid var(--line)"><div style="display:flex;gap:6px;min-width:180px"><input aria-label="Student ID for '+esc(s.full_name)+'" data-student-id="'+s.id+'" value="'+esc(s.student_id||"")+'" maxlength="40" placeholder="Enter student ID" style="min-width:110px;padding:8px"><button type="button" data-save-id="'+s.id+'" style="margin:0;padding:8px 10px">Save</button></div></td><td style="padding:10px;border-bottom:1px solid var(--line)"><span class="pill">'+esc(s.status)+'</span><div>'+(s.status!=="approved"?'<button data-id="'+s.id+'" data-status="approved">Approve</button> ':"")+(s.status!=="rejected"?'<button class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></td></tr>').join("")+'</tbody></table></div>';
+  list.innerHTML=d.students.map(s=>{
+    const photo=s.profile_image?'<img src="'+s.profile_image+'" alt="Student profile" style="width:88px;height:88px;object-fit:cover;border-radius:50%;border:2px solid var(--line)">':'<div class="pill">No photo</div>';
+    const details=[
+      ["Full name",s.full_name],["Arabic name",s.arabic_name],["Father's name",s.father_name],
+      ["Parent/guardian",s.guardian_name],["Surname",s.surname],["Phone",s.phone],
+      ["Email",s.email],["Student ID",s.student_id],["Date of birth",s.date_of_birth],
+      ["Gender",s.gender],["Nationality",s.nationality],["Class",s.class_name],
+      ["Grade",s.grade],["Registered",s.created_at?new Date(s.created_at).toLocaleString():""]
+    ];
+    return '<article class="card" style="margin:12px 0;padding:16px"><div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">'+photo+'<div><h3>'+esc(s.full_name)+'</h3><span class="pill">'+esc(s.status)+'</span></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:16px">'+details.map(([label,value])=>'<div><div class="tiny">'+label+'</div><strong style="overflow-wrap:anywhere">'+esc(value||"—")+'</strong></div>').join("")+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><label style="flex:1;min-width:190px">Student ID<input aria-label="Student ID for '+esc(s.full_name)+'" data-student-id="'+s.id+'" value="'+esc(s.student_id||"")+'" maxlength="40" placeholder="Enter student ID"></label><button type="button" data-save-id="'+s.id+'">Save ID</button>'+(s.status!=="approved"?'<button type="button" data-id="'+s.id+'" data-status="approved">Approve</button>':"")+(s.status!=="rejected"?'<button type="button" class="secondary" data-id="'+s.id+'" data-status="rejected">Reject</button>':"")+'</div></article>';
+  }).join("");
   list.querySelectorAll("button[data-save-id]").forEach(b=>b.addEventListener("click",async()=>{const field=list.querySelector('input[data-student-id="'+b.dataset.saveId+'"]');try{await api("/api/admin/students/"+b.dataset.saveId+"/student-id",{student_id:field.value});showNotice("Student ID saved.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));
   list.querySelectorAll("button[data-id]").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/admin/students/"+b.dataset.id+"/status",{status:b.dataset.status});showNotice("Student status updated.","success");await refreshStudents();}catch(e){showNotice(e.message,"error");}}));
 }
