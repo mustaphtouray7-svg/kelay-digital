@@ -281,9 +281,10 @@ def register():
             duplicate = conn.execute("SELECT id FROM portal_users WHERE phone=%s AND role='student' LIMIT 1", (phone,)).fetchone()
             if duplicate:
                 return jsonify({"error": "This phone number already has a student account. Contact the school."}), 409
+            student_id = generate_student_id(conn)
             row = conn.execute(
-                "INSERT INTO portal_users(full_name,father_name,guardian_name,surname,phone,email,password_hash,status,class_name,date_of_birth,profile_image,gender,nationality) VALUES (%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s,%s) RETURNING id",
-                (name, father_name, guardian_name, surname, phone, email, generate_password_hash(password), class_name, dob, profile_image, gender, nationality)
+                "INSERT INTO portal_users(full_name,father_name,guardian_name,surname,phone,email,student_id,password_hash,status,class_name,date_of_birth,profile_image,gender,nationality) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s,%s) RETURNING id",
+                (name, father_name, guardian_name, surname, phone, email, student_id, generate_password_hash(password), class_name, dob, profile_image, gender, nationality)
             ).fetchone()
             conn.commit()
         return jsonify({"message": "Registration submitted. The school must approve your account before you can sign in.", "id": row["id"]}), 201
