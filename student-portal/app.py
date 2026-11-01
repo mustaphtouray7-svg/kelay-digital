@@ -400,7 +400,8 @@ main{max-width:1100px;margin:0 auto;padding:36px 18px 60px}.hero{background:line
 .eyebrow{font-size:12px;letter-spacing:.16em;font-weight:700;color:#e8d5bd}.hero h1{font-size:clamp(28px,5vw,44px);line-height:1.12;margin:12px 0}.hero p{max-width:650px;color:#f4e9dd}
 .layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 8px 28px #5a3d2b0b}
 h2{margin:0 0 8px;font-size:23px}h3{margin:0 0 12px}label{display:block;font-weight:700;font-size:13px;margin:12px 0 5px}
-input,select{width:100%;padding:12px;border:1px solid #d8c7b2;border-radius:9px;font:inherit;background:#fff}button,.button{border:0;border-radius:10px;background:var(--brown);color:white;padding:12px 16px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;margin-top:14px}
+input,select{width:100%;padding:12px;border:1px solid #d8c7b2;border-radius:9px;font:inherit;background:#fff}
+.password-field{position:relative}.password-field input{padding-right:52px}.password-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);margin:0;padding:7px 9px;background:transparent;color:var(--brown);border:0;font-size:18px;line-height:1}.password-toggle:focus{outline:2px solid var(--brown);outline-offset:2px}button,.button{border:0;border-radius:10px;background:var(--brown);color:white;padding:12px 16px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;margin-top:14px}
 button.secondary{background:var(--sand);color:var(--brown)}button:disabled{opacity:.5;cursor:wait}.muted{color:var(--muted);font-size:14px}.notice{padding:12px 14px;border-radius:10px;background:var(--sand);margin:12px 0}.error{background:#fff0ed;color:#7d2619}.success{background:#edf7ed;color:#23572b}
 .hidden{display:none!important}.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.student{border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .pill{font-size:12px;font-weight:700;background:var(--sand);color:var(--brown);padding:4px 8px;border-radius:999px}.tiny{font-size:12px;color:var(--muted)}
@@ -412,11 +413,12 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 <section id="setup" class="card hidden" style="margin-bottom:18px"><h2>First-time administrator setup</h2><p class="muted">Use this one-time setup only when the school is ready to appoint its first portal administrator. You need the private setup key configured by the site owner.</p><form id="setupForm"><label for="setupName">Administrator full name</label><input id="setupName" required maxlength="120" autocomplete="name"><label for="setupEmail">Administrator email</label><input id="setupEmail" type="email" required maxlength="254" autocomplete="email"><label for="setupPassword">Strong password (at least 6 characters)</label><input id="setupPassword" type="password" required minlength="6" autocomplete="new-password"><label for="setupKey">One-time setup key</label><input id="setupKey" type="password" required autocomplete="off"><button type="submit">Create first administrator</button></form><p class="tiny">Do not share the setup key. Once the first administrator exists, this setup endpoint cannot create another first administrator.</p></section>
 <section id="auth" class="layout">
 <div class="card"><h2>Sign in</h2><p class="muted">Use your approved school account.</p>
-<form id="loginForm"><label for="loginEmail">Phone number or administrator email</label><input id="loginEmail" autocomplete="username" required maxlength="254"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></form></div>
+<form id="loginForm"><label for="loginEmail">Phone number or administrator email</label><input id="loginEmail" autocomplete="username" required maxlength="254"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required><p class="tiny"><a href="#passwordHelp" id="forgotPasswordLink">Forgot password?</a></p><button type="submit">Sign in</button></form></div>
 <div class="card"><h2>Student registration</h2><p class="muted">Register using your school details. The school must approve your account before you can sign in.</p><form id="registerForm"><label for="regName">First name</label><input id="regName" required maxlength="120"><label for="regFather">Father's name</label><input id="regFather" required maxlength="120"><label for="regGuardian">Parent/Guardian's name</label><input id="regGuardian" required maxlength="120"><label for="regSurname">Surname</label><input id="regSurname" required maxlength="120"><label for="regDob">Date of birth</label><input id="regDob" type="date" required><label for="regClass">Current class</label><select id="regClass" required><option value="">Select class</option><option>Nursery 1</option><option>Nursery 2</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
 <label for="regGender">Gender</label><select id="regGender" required><option value="">Select gender</option><option value="Male">Male</option><option value="Female">Female</option></select>
 <label for="regNationality">Nationality</label><select id="regNationality" required><option value="">Select nationality</option></select><label for="regPhone">Phone number</label><input id="regPhone" type="tel" required maxlength="40" autocomplete="tel"><label for="regPhoto">Profile picture (required)</label><input id="regPhoto" type="file" accept="image/*" required><p class="tiny">JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF or AVIF. Up to 5 MB.</p><img id="photoPreview" class="hidden" alt="Profile picture preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--line)"><label for="regPassword">Create password (6 characters minimum)</label><input id="regPassword" type="password" minlength="6" autocomplete="new-password" required><label for="regPasswordConfirm">Confirm password</label><input id="regPasswordConfirm" type="password" minlength="6" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
 </section>
+<section id="passwordHelp" class="card hidden" style="max-width:620px;margin:0 auto"><h2>Password help</h2><p>If you are an administrator, use the secure one-time reset link provided by the school website administrator. If you are a student, contact the school administrator to verify your identity and reset your account password. For security, this page does not reveal or email existing passwords.</p><button type="button" class="secondary" id="closePasswordHelp">Back to sign in</button></section>
 <section id="registrationSuccess" class="card hidden" style="max-width:680px;margin:0 auto;text-align:center;padding:clamp(28px,6vw,56px)"><div aria-hidden="true" style="font-size:48px;color:#23572b">✓</div><h2>Application submitted successfully!</h2><p class="muted" style="font-size:16px">Your student registration has been received. The school will review your application. You can sign in after the school approves your account.</p><p class="muted">Please keep your phone number and password safe. You do not need to submit the form again.</p><button type="button" id="backToSignIn">Back to sign in</button></section>
 <section id="dashboard" class="hidden"><div class="card"><div class="bar"><div><p class="eyebrow" style="color:var(--brown)">YOUR ACCOUNT</p><h2 id="welcome">Welcome</h2></div><button class="secondary" id="logout">Sign out</button></div><div id="profile"></div></div>
 <div id="adminPanel" class="hidden">
@@ -481,6 +483,29 @@ $("languageToggle").addEventListener("click",()=>{
   localStorage.setItem("studentPortalLanguage",currentLanguage);
   applyLanguage();
 });
+// Add accessible show/hide controls to every password field (admin and student forms).
+document.querySelectorAll('input[type="password"]').forEach(input=>{
+  const wrap=document.createElement("div");
+  wrap.className="password-field";
+  input.parentNode.insertBefore(wrap,input);
+  wrap.appendChild(input);
+  const toggle=document.createElement("button");
+  toggle.type="button";
+  toggle.className="password-toggle";
+  toggle.textContent="◉";
+  toggle.setAttribute("aria-label","Show password");
+  toggle.setAttribute("aria-pressed","false");
+  toggle.addEventListener("click",()=>{
+    const showing=input.type==="password";
+    input.type=showing?"text":"password";
+    toggle.setAttribute("aria-label",showing?"Hide password":"Show password");
+    toggle.setAttribute("aria-pressed",showing?"true":"false");
+    toggle.textContent=showing?"◎":"◉";
+  });
+  wrap.appendChild(toggle);
+});
+$("forgotPasswordLink").addEventListener("click",e=>{e.preventDefault();toggle("auth",false);toggle("passwordHelp",true);});
+$("closePasswordHelp").addEventListener("click",()=>{toggle("passwordHelp",false);toggle("auth",true);});
 function showNotice(message, kind="notice"){const n=$("notice");n.textContent=message;n.className=kind;}
 async function api(path, data, method="POST"){const res=await fetch(path,{method,headers:{"Content-Type":"application/json","X-CSRF-Token":csrf},body:method==="GET"?undefined:JSON.stringify(data||{})});const body=await res.json().catch(()=>({error:"Unexpected server response."}));if(body.csrf_token)csrf=body.csrf_token;if(!res.ok)throw new Error(body.error||"Request failed.");return body;}
 function toggle(id,on){$(id).classList.toggle("hidden",!on);}
