@@ -219,7 +219,8 @@ def normalize_profile_image(value):
                 image = image.convert("RGB")
             image.thumbnail((480, 480), Image.Resampling.LANCZOS)
             output = BytesIO()
-            image.save(output, format="JPEG", quality=82, optimize=True)            return "data:image/jpeg;base64," + base64.b64encode(output.getvalue()).decode("ascii")
+            image.save(output, format="JPEG", quality=82, optimize=True)
+            return "data:image/jpeg;base64," + base64.b64encode(output.getvalue()).decode("ascii")
     except (ValueError, binascii.Error, UnidentifiedImageError, OSError, Image.DecompressionBombError):
         return None
 
