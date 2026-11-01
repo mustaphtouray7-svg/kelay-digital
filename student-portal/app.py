@@ -185,7 +185,7 @@ def admin_password_reset(token):
         except psycopg.errors.UniqueViolation:
             conn.rollback()
             return "This password reset link has already been used.", 410
-        admin = conn.execute("SELECT id FROM portal_users WHERE role='admin' AND lower(email)=lower(%s) LIMIT 1", (ADMIN_EMAIL,)).fetchone()
+        admin = conn.execute("SELECT id FROM portal_users WHERE role='admin' ORDER BY id ASC LIMIT 1").fetchone()
         if not admin:
             conn.rollback()
             return "The school administrator account was not found. Contact the portal administrator.", 404
