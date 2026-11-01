@@ -399,6 +399,49 @@ def create_student():
     except psycopg.errors.UniqueViolation:
         return jsonify({"error": "That email or student ID is already in use."}), 409
 
+@app.post("/api/admin/students/<int:user_id>/edit")
+@admin_required
+def edit_student(user_id):
+    if not verify_csrf():
+        return jsonify({"error": "Refresh the page and try again."}), 400
+    data = request.json or {}
+    fields = ("full_name","father_name","guardian_name","surname","arabic_name","phone","email","student_id","class_name","grade","gender","nationality")
+    values = {key: str(data.get(key, "")).strip() for key in fields}
+    if not values["full_name"] or "@" not in values["email"]:
+        return jsonify({"error": "Enter a student name and valid email."}), 400
+    try:
+        dob = datetime.strptime(str(data.get("date_of_birth", "")), "%Y-%m-%d").date() if data.get("date_of_birth") else None
+    except ValueError:
+        return jsonify({"error": "Enter a valid date of birth."}), 400
+    try:
+        with db() as conn:
+            row = conn.execute("UPDATE portal_users SET full_name=%s,father_name=%s,guardian_name=%s,surname=%s,arabic_name=%s,phone=%s,email=%s,student_id=%s,class_name=%s,grade=%s,gender=%s,nationality=%s,date_of_birth=%s WHERE id=%s AND role=%s RETURNING *", (values["full_name"],values["father_name"],values["guardian_name"],values["surname"],values["arabic_name"],values["phone"],values["email"],values["student_id"] or None,values["class_name"],values["grade"],values["gender"],values["nationality"],dob,user_id,"student")).fetchone()
+            if not row:
+                return jsonify({"error": "Student account not found."}), 404
+            conn.execute("INSERT INTO student_activity(student_user_id,actor_user_id,activity_type,description) VALUES (%s,%s,%s,%s)", (user_id,session["user_id"],"profile_updated","Administrator updated student profile"))
+            conn.commit()
+        return jsonify({"student": user_public(row)})
+    except psycopg.errors.UniqueViolation:
+        return jsonify({"error": "Email or student ID is already in use."}), 409
+
+@app.post("/api/admin/students/<int:user_id>/reset-password")
+@admin_required
+def reset_student_password(user_id):
+    if not verify_csrf():
+        return jsonify({"error": "Refresh the page and try again."}), 400
+    data = request.json or {}
+    password = str(data.get("password", ""))
+    confirm = str(data.get("confirm", ""))
+    if len(password) < 10 or password != confirm:
+        return jsonify({"error": "Passwords must match and be at least 10 characters."}), 400
+    with db() as conn:
+        student = conn.execute("SELECT id FROM portal_users WHERE id=%s AND role=%s", (user_id,"student")).fetchone()
+        if not student:
+            return jsonify({"error": "Student account not found."}), 404
+        conn.execute("UPDATE portal_users SET password_hash=%s WHERE id=%s", (generate_password_hash(password),user_id))
+        conn.execute("INSERT INTO student_activity(student_user_id,actor_user_id,activity_type,description) VALUES (%s,%s,%s,%s)", (user_id,session["user_id"],"password_reset","Administrator reset student password"))
+        conn.commit()
+    return jsonify({"message": "Student password reset successfully."})
 @app.post("/api/admin/students/<int:user_id>/student-id")
 @admin_required
 def assign_student_id(user_id):
