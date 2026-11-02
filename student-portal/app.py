@@ -176,9 +176,6 @@ def setup_admin():
     if not SETUP_KEY or not secrets.compare_digest(str(request.json.get("setup_key", "")), SETUP_KEY):
         return jsonify({"error": "The setup key is not valid."}), 403
     data = request.json or {}
-    requested_role = str(data.get("role", "student")).strip().lower()
-    if requested_role not in ("student", "staff"):
-        return jsonify({"error": "Choose Student or Staff."}), 400
     name = str(data.get("full_name", "")).strip()
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", ""))
@@ -262,6 +259,9 @@ def register():
     if not verify_csrf():
         return jsonify({"error": "Refresh the page and try again."}), 400
     data = request.json or {}
+    requested_role = str(data.get("role", "student")).strip().lower()
+    if requested_role not in ("student", "staff"):
+        return jsonify({"error": "Choose Student or Staff."}), 400
     name = str(data.get("full_name", "")).strip()
     father_name = str(data.get("father_name", "")).strip()
     guardian_name = str(data.get("guardian_name", "")).strip()
@@ -313,14 +313,11 @@ def login():
     if not verify_csrf():
         return jsonify({"error": "Refresh the page and try again."}), 400
     data = request.json or {}
-    requested_role = str(data.get("role", "")).strip().lower()
-    if requested_role not in ("student", "staff", "admin"):
-        return jsonify({"error": "Choose Student or Staff."}), 400
     login_value = str(data.get("login", data.get("email", ""))).strip()
     password = str(data.get("password", ""))
     with db() as conn:
         row = conn.execute("SELECT * FROM portal_users WHERE lower(email)=lower(%s) OR phone=%s ORDER BY CASE WHEN phone=%s THEN 0 ELSE 1 END LIMIT 1", (login_value, login_value, login_value)).fetchone()
-    if not row or row["role"] != requested_role or not check_password_hash(row["password_hash"], password):
+    if not row or not check_password_hash(row["password_hash"], password):
         return jsonify({"error": "Phone number or password is incorrect."}), 401
     if row["status"] != "approved":
         return jsonify({"error": "Your account is " + row["status"] + ". Please contact the school if you need help."}), 403
@@ -656,7 +653,7 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
 <section id="setup" class="card hidden" style="margin-bottom:18px"><h2>First-time administrator setup</h2><p class="muted">Use this one-time setup only when the school is ready to appoint its first portal administrator. You need the private setup key configured by the site owner.</p><form id="setupForm"><label for="setupName">Administrator full name</label><input id="setupName" required maxlength="120" autocomplete="name"><label for="setupEmail">Administrator email</label><input id="setupEmail" type="email" required maxlength="254" autocomplete="email"><label for="setupPassword">Strong password (at least 6 characters)</label><input id="setupPassword" type="password" required minlength="6" autocomplete="new-password"><label for="setupKey">One-time setup key</label><input id="setupKey" type="password" required autocomplete="off"><button type="submit">Create first administrator</button></form><p class="tiny">Do not share the setup key. Once the first administrator exists, this setup endpoint cannot create another first administrator.</p></section>
 <section id="auth" class="layout">
 <div class="card"><h2>Sign in</h2><p class="muted">Use your approved school account.</p>
-<form id="loginForm"><label for="loginRole">Sign in as</label><select id="loginRole" required><option value="student">Student</option><option value="staff">Staff</option></select><label for="loginEmail">Phone number</label><input id="loginEmail" autocomplete="username" required maxlength="254"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required><p class="tiny"><a href="#passwordHelp" id="forgotPasswordLink">Forgot password?</a></p><button type="submit">Sign in</button></form></div>
+<form id="loginForm"><label for="loginEmail">Phone number</label><input id="loginEmail" autocomplete="username" required maxlength="254"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required><p class="tiny"><a href="#passwordHelp" id="forgotPasswordLink">Forgot password?</a></p><button type="submit">Sign in</button></form></div>
 <div class="card"><h2>Create an account</h2><p class="muted">Choose Student or Staff. The school must approve your account before you can sign in.</p><form id="registerForm"><label for="registerRole">Create account as</label><select id="registerRole" required><option value="student">Student</option><option value="staff">Staff</option></select><label for="regName">First name</label><input id="regName" required maxlength="120"><label for="regFather">Father's name</label><input id="regFather" required maxlength="120"><label for="regGuardian">Parent/Guardian's name</label><input id="regGuardian" required maxlength="120"><label for="regSurname">Surname</label><input id="regSurname" required maxlength="120"><label for="regDob">Date of birth</label><input id="regDob" type="date" required><label for="regClass">Current class</label><select id="regClass" required><option value="">Select class</option><option>Nursery 1</option><option>Nursery 2</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option></select>
 <label for="regGender">Gender</label><select id="regGender" required><option value="">Select gender</option><option value="Male">Male</option><option value="Female">Female</option></select>
 <label for="regNationality">Nationality</label><select id="regNationality" required><option value="">Select nationality</option></select><label for="regPhone">Phone number</label><input id="regPhone" type="tel" required maxlength="40" autocomplete="tel"><label for="regPhoto">Profile picture (required)</label><input id="regPhoto" type="file" accept="image/*" required><p class="tiny">JPG, PNG, WebP, GIF, BMP, TIFF, HEIC, HEIF or AVIF. Up to 5 MB.</p><img id="photoPreview" class="hidden" alt="Profile picture preview" style="width:96px;height:96px;object-fit:cover;border-radius:50%;margin-top:8px;border:2px solid var(--line)"><label for="regPassword">Create password (6 characters minimum)</label><input id="regPassword" type="password" minlength="6" autocomplete="new-password" required><label for="regPasswordConfirm">Confirm password</label><input id="regPasswordConfirm" type="password" minlength="6" autocomplete="new-password" required><button type="submit">Submit registration</button></form></div>
@@ -852,7 +849,7 @@ $("closeStudentPage").addEventListener("click",()=>toggle("studentPage",false));
 async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin){await refreshStudents();await loadAdminReportCards();}}
 async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else if(!sd.database_ready){throw new Error("The student database is not ready. Please contact the website administrator.");}else if(sd.setup_needed){toggle("auth",false);toggle("setup",true);}else{toggle("setup",false);toggle("auth",true);}}catch(e){toggle("setup",false);toggle("auth",true);showNotice("Portal setup is not complete yet. "+e.message,"error");}}
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/setup-admin",{setup_key:$("setupKey").value,full_name:$("setupName").value,email:$("setupEmail").value,password:$("setupPassword").value});e.target.reset();toggle("setup",false);await showUser(d.user);showNotice("First administrator account created successfully.","success");}catch(err){showNotice(err.message,"error");}});
-$("loginForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/login",{role:$("loginRole").value,login:$("loginEmail").value,password:$("loginPassword").value});await showUser(d.user);showNotice("Signed in successfully.","success");}catch(err){showNotice(err.message,"error");}});
+$("loginForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/login",{login:$("loginEmail").value,password:$("loginPassword").value});await showUser(d.user);showNotice("Signed in successfully.","success");}catch(err){showNotice(err.message,"error");}});
 $("registerForm").addEventListener("submit",async e=>{e.preventDefault();try{const selectedRole=$("registerRole").value;const photo=await imageToDataUrl($("regPhoto").files[0]);if($("regPassword").value!==$("regPasswordConfirm").value)throw new Error("Passwords do not match.");const d=await api("/api/register",{role:selectedRole,full_name:$("regName").value,father_name:$("regFather").value,guardian_name:$("regGuardian").value,surname:$("regSurname").value,date_of_birth:$("regDob").value,phone:$("regPhone").value,class_name:$("regClass").value,gender:$("regGender").value,nationality:$("regNationality").value,password:$("regPassword").value,password_confirm:$("regPasswordConfirm").value,profile_image:photo});e.target.reset();toggle("photoPreview",false);toggle("auth",false);toggle("registrationSuccess",true);window.scrollTo({top:0,behavior:"smooth"});}catch(err){showNotice(err.message,"error");}});
 $("backToSignIn").addEventListener("click",()=>{toggle("registrationSuccess",false);toggle("auth",true);window.scrollTo({top:0,behavior:"smooth"});});
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{});location.reload();}catch(e){showNotice(e.message,"error");}});
