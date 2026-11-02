@@ -81,6 +81,16 @@ def init_db():
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )""")
         conn.execute("CREATE INDEX IF NOT EXISTS student_activity_student_created_idx ON student_activity(student_user_id, created_at DESC)")
+        conn.execute("""CREATE TABLE IF NOT EXISTS student_report_cards (
+            id BIGSERIAL PRIMARY KEY,
+            student_user_id BIGINT NOT NULL REFERENCES portal_users(id) ON DELETE CASCADE,
+            title VARCHAR(160) NOT NULL,
+            file_name VARCHAR(255) NOT NULL,
+            file_data BYTEA NOT NULL,
+            uploaded_by BIGINT REFERENCES portal_users(id) ON DELETE SET NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )""")
+        conn.execute("CREATE INDEX IF NOT EXISTS student_report_cards_student_idx ON student_report_cards(student_user_id, created_at DESC)")
         conn.commit()
 
 @app.before_request
@@ -366,6 +376,77 @@ def admin_student_overview(user_id):
         } for a in activities]
     })
 
+@app.get("/api/student/report-cards")
+@login_required
+def student_report_cards():
+    if session.get("role") != "student":
+        return jsonify({"error": "Student access required."}), 403
+    with db() as conn:
+        rows=conn.execute("SELECT id,title,file_name,created_at FROM student_report_cards WHERE student_user_id=%s ORDER BY created_at DESC",(session["user_id"],)).fetchall()
+    return jsonify({"report_cards":[{"id":r["id"],"title":r["title"],"file_name":r["file_name"],"created_at":r["created_at"].isoformat() if r["created_at"] else None} for r in rows]})
+
+@app.get("/api/student/report-cards/<int:report_id>/download")
+@login_required
+def download_student_report_card(report_id):
+    if session.get("role") != "student":
+        return jsonify({"error": "Student access required."}), 403
+    from flask import Response
+    with db() as conn:
+        row=conn.execute("SELECT file_name,file_data FROM student_report_cards WHERE id=%s AND student_user_id=%s",(report_id,session["user_id"])).fetchone()
+    if not row:
+        return jsonify({"error":"Report card not found."}),404
+    name="".join(ch for ch in row["file_name"] if ch.isalnum() or ch in " ._-")[:120] or "report-card.pdf"
+    return Response(bytes(row["file_data"]),mimetype="application/pdf",headers={"Content-Disposition":'attachment; filename="'+name+'"',"X-Content-Type-Options":"nosniff"})
+
+@app.get("/api/admin/report-cards")
+@admin_required
+def admin_report_cards():
+    with db() as conn:
+        rows=conn.execute("""SELECT r.id,r.title,r.file_name,r.created_at,u.id AS student_id,u.full_name,u.student_id AS school_student_id
+          FROM student_report_cards r JOIN portal_users u ON u.id=r.student_user_id
+          ORDER BY r.created_at DESC LIMIT 300""").fetchall()
+    return jsonify({"report_cards":[{"id":r["id"],"title":r["title"],"file_name":r["file_name"],"created_at":r["created_at"].isoformat() if r["created_at"] else None,"user_id":r["student_id"],"student_name":r["full_name"],"student_id":r["school_student_id"]} for r in rows]})
+
+@app.post("/api/admin/report-cards")
+@admin_required
+def upload_student_report_card():
+    if not verify_csrf():
+        return jsonify({"error":"Refresh the page and try again."}),400
+    student_id=str(request.form.get("student_user_id","")).strip()
+    title=str(request.form.get("title","")).strip()
+    uploaded=request.files.get("report_file")
+    if not student_id.isdigit() or not title or len(title)>160 or not uploaded:
+        return jsonify({"error":"Choose a student, enter a title and select a PDF report card."}),400
+    data=uploaded.read(5*1024*1024+1)
+    if len(data)>5*1024*1024:
+        return jsonify({"error":"PDF must be 5 MB or smaller."}),413
+    if not data.startswith(b"%PDF-"):
+        return jsonify({"error":"Only valid PDF report cards are accepted."}),400
+    filename=os.path.basename(uploaded.filename or "report-card.pdf")[:255]
+    if not filename.lower().endswith(".pdf"):
+        filename="report-card.pdf"
+    with db() as conn:
+        student=conn.execute("SELECT id FROM portal_users WHERE id=%s AND role='student' AND status='approved'",(int(student_id),)).fetchone()
+        if not student:
+            return jsonify({"error":"Approved student account not found."}),404
+        row=conn.execute("INSERT INTO student_report_cards(student_user_id,title,file_name,file_data,uploaded_by) VALUES (%s,%s,%s,%s,%s) RETURNING id",(int(student_id),title,filename,psycopg.Binary(data),session["user_id"])).fetchone()
+        conn.execute("INSERT INTO student_activity(student_user_id,actor_user_id,activity_type,description) VALUES (%s,%s,'report_card_uploaded',%s)",(int(student_id),session["user_id"],"Administrator uploaded report card: "+title[:180]))
+        conn.commit()
+    return jsonify({"message":"Report card uploaded and assigned to the student.","id":row["id"]}),201
+
+@app.delete("/api/admin/report-cards/<int:report_id>")
+@admin_required
+def delete_student_report_card(report_id):
+    if not verify_csrf():
+        return jsonify({"error":"Refresh the page and try again."}),400
+    with db() as conn:
+        row=conn.execute("DELETE FROM student_report_cards WHERE id=%s RETURNING student_user_id,title",(report_id,)).fetchone()
+        if not row:
+            return jsonify({"error":"Report card not found."}),404
+        conn.execute("INSERT INTO student_activity(student_user_id,actor_user_id,activity_type,description) VALUES (%s,%s,'report_card_deleted',%s)",(row["student_user_id"],session["user_id"],"Administrator removed report card: "+row["title"][:180]))
+        conn.commit()
+    return jsonify({"message":"Report card removed."})
+
 @app.post("/api/admin/create-student")
 @admin_required
 def create_student():
@@ -515,6 +596,11 @@ button.secondary{background:var(--sand);color:var(--brown)}button:disabled{opaci
 .admin-actions button{margin:0;padding:7px 9px;font-size:12px}
 .admin-security-note{color:#64748b;font-size:13px;margin-top:12px}
 
+/* Report-card upload area */
+.report-upload-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end}
+.report-upload-list{margin-top:16px;display:grid;gap:9px}
+.report-upload-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid #dce5ef;border-radius:11px}
+.report-demo-badge{display:inline-block;padding:5px 9px;border-radius:7px;background:#fff3cd;color:#765500;font-size:11px;font-weight:800;letter-spacing:.05em}
 /* Student dashboard */
 .student-profile-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:12px 0 18px}
 .student-avatar{width:76px;height:76px;object-fit:cover;border-radius:50%;border:3px solid #e4edf6}
@@ -570,7 +656,7 @@ footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid va
   </div>
   <div id="studentOverview"></div>
 </div></div>
-<div class="card" style="margin-top:18px"><h2>Create a student account</h2><form id="createStudent"><label for="newName">First name</label><input id="newName" required maxlength="120"><label for="newFather">Father name</label><input id="newFather" required maxlength="120"><label for="newSurname">Surname</label><input id="newSurname" required maxlength="120"><label for="newArabic">Full name in Arabic</label><input id="newArabic" required maxlength="200" dir="rtl"><label for="newPhone">Phone number</label><input id="newPhone" type="tel" required maxlength="40"><label for="newEmail">Email</label><input id="newEmail" type="email" required maxlength="254"><label for="newId">Student ID</label><input id="newId" maxlength="40"><label for="newClass">Class</label><input id="newClass" required maxlength="80"><label for="newGrade">Grade</label><input id="newGrade" required maxlength="80"><label for="newPassword">Temporary password (6 characters minimum)</label><input id="newPassword" type="password" minlength="6" required><button type="submit">Create approved account</button></form></div></div>
+<div class="card" style="margin-top:18px"><h2>Report Cards</h2><p class="muted">Upload a PDF report card and assign it to an approved student. Only that student can download it.</p><form id="reportUploadForm" class="report-upload-form"><label>Student<select id="reportStudent" name="student_user_id" required><option value="">Choose student</option></select></label><label>Report title<input id="reportTitle" name="title" maxlength="160" placeholder="e.g. Term 1 Report Card" required></label><label>PDF file<input id="reportFile" name="report_file" type="file" accept="application/pdf,.pdf" required></label><button type="submit">Upload report card</button></form><div id="adminReportCards" class="report-upload-list">Loading uploaded report cards…</div></div><div class="card" style="margin-top:18px"><h2>Create a student account</h2><form id="createStudent"><label for="newName">First name</label><input id="newName" required maxlength="120"><label for="newFather">Father name</label><input id="newFather" required maxlength="120"><label for="newSurname">Surname</label><input id="newSurname" required maxlength="120"><label for="newArabic">Full name in Arabic</label><input id="newArabic" required maxlength="200" dir="rtl"><label for="newPhone">Phone number</label><input id="newPhone" type="tel" required maxlength="40"><label for="newEmail">Email</label><input id="newEmail" type="email" required maxlength="254"><label for="newId">Student ID</label><input id="newId" maxlength="40"><label for="newClass">Class</label><input id="newClass" required maxlength="80"><label for="newGrade">Grade</label><input id="newGrade" required maxlength="80"><label for="newPassword">Temporary password (6 characters minimum)</label><input id="newPassword" type="password" minlength="6" required><button type="submit">Create approved account</button></form></div></div>
 </section>
 </main><footer>Alh. Lalo Kanteh Islamic Institute · Tabokoto, The Gambia</footer>
 <script>
@@ -688,7 +774,7 @@ function renderStudentWorkspace(u){
     }else if(id==="academics"){
       content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">LEARNING</p><h2>Academics</h2><p class="muted">'+heading[2]+'</p></div></div><div class="student-feature-grid"><article class="student-content-card"><h3>My subjects</h3>'+empty("Subjects not available","Your registered subjects will appear here.")+'</article><article class="student-content-card"><h3>Timetable</h3>'+empty("Timetable not published","Your weekly lesson schedule will appear here.")+'</article><article class="student-content-card"><h3>Assignments</h3>'+empty("No assignments posted","Teachers’ assignments and due dates will appear here.")+'</article><article class="student-content-card"><h3>Learning materials</h3>'+empty("No materials uploaded","Notes and learning files shared by teachers will appear here.")+'</article></div>';
     }else if(id==="performance"){
-      content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">ACADEMIC RECORD</p><h2>Performance & report cards</h2><p class="muted">Only results officially entered and published by the school should appear here.</p></div></div><div class="student-content-card"><div class="student-empty"><span aria-hidden="true">▤</span><h3>No report cards available</h3><p>Your examination results and report cards will appear here after the school publishes them.</p><button type="button" class="student-download-btn" disabled title="Available after a report card is published">Download report card</button></div></div>';
+      content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">ACADEMIC RECORD</p><h2>Performance & report cards</h2><p class="muted">Official report cards uploaded by the school are available below.</p></div></div><div class="student-content-card"><h3>My report cards</h3><div id="studentReportCards" class="report-upload-list">Loading report cards…</div></div>';loadStudentReportCards();
     }else if(id==="attendance"){
       content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">SCHOOL RECORD</p><h2>Attendance</h2><p class="muted">Review your attendance once the school begins recording it in the portal.</p></div></div><div class="student-content-card">'+empty("No attendance record yet","Your attendance history and summary will appear here after records are entered by the school.")+'</div>';
     }else{
@@ -697,6 +783,25 @@ function renderStudentWorkspace(u){
   }
   root.querySelectorAll("[data-student-tab]").forEach(btn=>btn.addEventListener("click",()=>panel(btn.dataset.studentTab)));
   panel("overview");
+}
+async function loadAdminReportCards(){
+ const [students,docs]=await Promise.all([api("/api/admin/students",null,"GET"),api("/api/admin/report-cards",null,"GET")]);
+ const select=$("reportStudent");const selected=select.value;
+ select.innerHTML='<option value="">Choose student</option>'+students.students.filter(s=>s.status==="approved").map(s=>'<option value="'+s.id+'">'+esc(s.full_name)+' · '+esc(s.student_id||"No ID")+'</option>').join("");
+ if(selected)select.value=selected;
+ const list=$("adminReportCards");
+ list.innerHTML=docs.report_cards.length?docs.report_cards.map(d=>'<div class="report-upload-row"><div><strong>'+esc(d.title)+'</strong><div class="tiny">'+esc(d.student_name)+' · '+esc(d.student_id||"No student ID")+' · '+esc(d.file_name)+'</div></div><button type="button" class="secondary" data-delete-report="'+d.id+'">Remove</button></div>').join(""):'<p class="muted">No report cards uploaded yet.</p>';
+ list.querySelectorAll("[data-delete-report]").forEach(btn=>btn.addEventListener("click",async()=>{if(!confirm("Remove this report card from the student's account?"))return;try{await api("/api/admin/report-cards/"+btn.dataset.deleteReport,{},"DELETE");showNotice("Report card removed.","success");await loadAdminReportCards();}catch(e){showNotice(e.message,"error");}}));
+}
+$("reportUploadForm").addEventListener("submit",async e=>{
+ e.preventDefault();const file=$("reportFile").files[0];if(!file)return;
+ if(file.size>5*1024*1024){showNotice("PDF must be 5 MB or smaller.","error");return;}
+ const form=new FormData(e.target);
+ try{const response=await fetch("/api/admin/report-cards",{method:"POST",headers:{"X-CSRF-Token":csrf},body:form});const result=await response.json().catch(()=>({error:"Unexpected server response."}));if(!response.ok)throw new Error(result.error||"Upload failed.");e.target.reset();showNotice(result.message,"success");await loadAdminReportCards();}catch(err){showNotice(err.message,"error");}
+});
+async function loadStudentReportCards(){
+ const list=$("studentReportCards");if(!list)return;
+ try{const d=await api("/api/student/report-cards",null,"GET");list.innerHTML=d.report_cards.length?d.report_cards.map(r=>'<div class="report-upload-row"><div><strong>'+esc(r.title)+'</strong><div class="tiny">'+esc(r.file_name)+' · '+esc(r.created_at?new Date(r.created_at).toLocaleDateString():"")+'</div></div><a class="button" href="/api/student/report-cards/'+r.id+'/download">Download PDF</a></div>').join(""):'<p class="muted">No official report cards have been uploaded to your account yet.</p>';}catch(e){list.textContent=e.message;}
 }
 async function refreshStudents(){
   const d=await api("/api/admin/students",null,"GET");
@@ -729,7 +834,7 @@ async function openStudentPage(id){
   $("studentPage").scrollIntoView({behavior:"smooth",block:"start"});
 }
 $("closeStudentPage").addEventListener("click",()=>toggle("studentPage",false));
-async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin)await refreshStudents();}
+async function showUser(u){toggle("auth",false);toggle("setup",false);toggle("dashboard",true);renderProfile(u);const admin=u.role==="admin";toggle("adminPanel",admin);if(admin){await refreshStudents();await loadAdminReportCards();}}
 async function boot(){try{await loadCsrf();const sr=await fetch("/api/setup-status");const sd=await sr.json();const r=await fetch("/api/me");if(r.ok){const d=await r.json();await showUser(d.user);}else if(!sd.database_ready){throw new Error("The student database is not ready. Please contact the website administrator.");}else if(sd.setup_needed){toggle("auth",false);toggle("setup",true);}else{toggle("setup",false);toggle("auth",true);}}catch(e){toggle("setup",false);toggle("auth",true);showNotice("Portal setup is not complete yet. "+e.message,"error");}}
 $("setupForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/setup-admin",{setup_key:$("setupKey").value,full_name:$("setupName").value,email:$("setupEmail").value,password:$("setupPassword").value});e.target.reset();toggle("setup",false);await showUser(d.user);showNotice("First administrator account created successfully.","success");}catch(err){showNotice(err.message,"error");}});
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();try{const d=await api("/api/login",{login:$("loginEmail").value,password:$("loginPassword").value});await showUser(d.user);showNotice("Signed in successfully.","success");}catch(err){showNotice(err.message,"error");}});
