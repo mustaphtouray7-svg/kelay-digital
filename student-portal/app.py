@@ -515,6 +515,36 @@ button.secondary{background:var(--sand);color:var(--brown)}button:disabled{opaci
 .admin-actions button{margin:0;padding:7px 9px;font-size:12px}
 .admin-security-note{color:#64748b;font-size:13px;margin-top:12px}
 
+/* Student dashboard */
+.student-profile-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:12px 0 18px}
+.student-avatar{width:76px;height:76px;object-fit:cover;border-radius:50%;border:3px solid #e4edf6}
+.student-avatar-empty{display:grid;place-items:center;background:#edf3f9;font-size:30px}
+.student-profile-head h3{margin:0;color:#174a85;font-size:20px}
+.student-quick-facts,.student-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.student-quick-facts>div,.student-stat,.student-content-card{background:#fff;border:1px solid #dce5ef;border-radius:15px;padding:17px}
+.student-quick-facts small,.student-account-grid small{display:block;color:#64748b;font-size:11px;font-weight:700;letter-spacing:.08em}
+.student-quick-facts strong,.student-account-grid strong{display:block;margin-top:5px;color:#193b60;overflow-wrap:anywhere}
+.student-workspace{margin-top:18px;color:#172b4d}
+.student-nav{display:flex;gap:8px;overflow-x:auto;padding:5px 1px 14px}
+.student-nav-btn{flex:0 0 auto;margin:0;background:#edf2f7!important;color:#29445f!important;border:1px solid #d8e2ed!important}
+.student-nav-btn.active{background:#1769aa!important;color:#fff!important;border-color:#1769aa!important}
+.student-section-heading{margin:12px 0 18px}
+.student-kicker{font-size:11px;font-weight:800;letter-spacing:.13em;color:#1769aa;margin:0 0 5px}
+.student-section-heading h2{color:#174a85;margin:0}
+.student-stat{min-height:118px;box-shadow:0 5px 18px #183b6308}
+.student-stat span,.student-stat small{display:block;color:#64748b}
+.student-stat strong{display:block;font-size:28px;color:#174a85;margin:5px 0}
+.student-feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
+.student-content-card{margin-bottom:14px;box-shadow:0 5px 18px #183b6308}
+.student-content-card h3{color:#174a85}
+.student-empty{text-align:center;padding:18px 10px;color:#64748b}
+.student-empty>span{font-size:27px;color:#8aa3bd}
+.student-empty h3{margin:7px 0;color:#29445f}
+.student-empty p{max-width:520px;margin:0 auto;font-size:14px}
+.student-download-btn{background:#e8eef5!important;color:#64748b!important;cursor:not-allowed!important}
+.student-account-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+@media(max-width:560px){.student-nav{margin-left:-4px;margin-right:-4px}.student-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-quick-facts{grid-template-columns:1fr 1fr}}
+
 .hidden{display:none!important}.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.student{border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .pill{font-size:12px;font-weight:700;background:var(--sand);color:var(--brown);padding:4px 8px;border-radius:999px}.tiny{font-size:12px;color:var(--muted)}
 footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid var(--line)}a{color:var(--brown)}
@@ -630,7 +660,44 @@ function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&l
 async function loadCsrf(){const r=await fetch("/api/csrf");const d=await r.json();if(!r.ok)throw new Error(d.error||"Portal is not configured yet.");csrf=d.csrf_token;}
 async function imageToDataUrl(file){if(!file)throw new Error("Choose a profile picture first.");if(!file.type.startsWith("image/"))throw new Error("Choose an image file.");if(file.size>5*1024*1024)throw new Error("Choose a picture smaller than 5 MB.");return await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error("Could not read that image file."));reader.readAsDataURL(file);});}
 $("regPhoto").addEventListener("change",async()=>{try{if($("regPhoto").files[0]){$("photoPreview").src=await imageToDataUrl($("regPhoto").files[0]);toggle("photoPreview",true);}}catch(e){toggle("photoPreview",false);showNotice(e.message,"error");}});
-function renderProfile(u){$("welcome").textContent="Welcome, "+u.full_name;$("profile").innerHTML=(u.profile_image?'<img src="'+u.profile_image+'" alt="Student profile picture" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid var(--line)">':"")+'<p><strong>Email:</strong> '+esc(u.email)+'</p><p><strong>Student ID:</strong> '+esc(u.student_id||"Not assigned")+'</p><p><strong>Class:</strong> '+esc(u.class_name||"Not assigned")+'</p><p><strong>Account status:</strong> <span class="pill">'+esc(u.status)+'</span></p><p class="muted">Exam results and attendance can be added when the school provides verified records.</p>';}
+function renderProfile(u){
+  $("welcome").textContent="Welcome, "+u.full_name;
+  const photo=u.profile_image?'<img src="'+u.profile_image+'" alt="Student profile picture" class="student-avatar">':'<div class="student-avatar student-avatar-empty" aria-hidden="true">👤</div>';
+  $("profile").innerHTML='<div class="student-profile-head">'+photo+'<div><h3>'+esc(u.full_name)+'</h3><p class="muted">Your personal student space</p><span class="pill">'+esc(u.status)+'</span></div></div><div class="student-quick-facts"><div><small>STUDENT ID</small><strong>'+esc(u.student_id||"Not assigned")+'</strong></div><div><small>CLASS</small><strong>'+esc(u.class_name||"Not assigned")+'</strong></div><div><small>PHONE</small><strong>'+esc(u.phone||"Not added")+'</strong></div></div>';
+  if(u.role==="student") renderStudentWorkspace(u);
+}
+function renderStudentWorkspace(u){
+  const sections=[
+    ["overview","Overview","A quick summary of your school account."],
+    ["academics","Academics","Your subjects, timetable, assignments and learning materials."],
+    ["performance","Performance","Examination results and downloadable report cards."],
+    ["attendance","Attendance","Your attendance history and school attendance record."],
+    ["account","My Account","Your registered personal and school details."]
+  ];
+  $("studentWorkspace")?.remove();
+  const root=document.createElement("section");root.id="studentWorkspace";root.className="student-workspace";
+  root.innerHTML='<nav class="student-nav" aria-label="Student dashboard sections">'+sections.map(([id,label])=>'<button type="button" class="student-nav-btn" data-student-tab="'+id+'">'+label+'</button>').join("")+'</nav><div id="studentWorkspaceContent"></div>';
+  $("dashboard").appendChild(root);
+  const content=root.querySelector("#studentWorkspaceContent");
+  function panel(id){
+    const heading=sections.find(s=>s[0]===id);
+    root.querySelectorAll("[data-student-tab]").forEach(btn=>{const active=btn.dataset.studentTab===id;btn.classList.toggle("active",active);btn.setAttribute("aria-current",active?"page":"false");});
+    const empty=(title,detail)=>'<div class="student-empty"><span aria-hidden="true">▤</span><h3>'+title+'</h3><p>'+detail+'</p></div>';
+    if(id==="overview"){
+      content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">STUDENT DASHBOARD</p><h2>My overview</h2><p class="muted">Welcome to your school dashboard, '+esc(u.full_name)+'.</p></div></div><div class="student-stat-grid"><article class="student-stat"><span>My subjects</span><strong>—</strong><small>Not added yet</small></article><article class="student-stat"><span>Attendance</span><strong>—</strong><small>No attendance records yet</small></article><article class="student-stat"><span>Latest result</span><strong>—</strong><small>No results published yet</small></article><article class="student-stat"><span>Assignments</span><strong>—</strong><small>No assignments posted yet</small></article></div><div class="student-content-card"><h3>School announcements</h3>'+empty("No announcements yet","School announcements will appear here when published by the school.")+'</div>';
+    }else if(id==="academics"){
+      content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">LEARNING</p><h2>Academics</h2><p class="muted">'+heading[2]+'</p></div></div><div class="student-feature-grid"><article class="student-content-card"><h3>My subjects</h3>'+empty("Subjects not available","Your registered subjects will appear here.")+'</article><article class="student-content-card"><h3>Timetable</h3>'+empty("Timetable not published","Your weekly lesson schedule will appear here.")+'</article><article class="student-content-card"><h3>Assignments</h3>'+empty("No assignments posted","Teachers’ assignments and due dates will appear here.")+'</article><article class="student-content-card"><h3>Learning materials</h3>'+empty("No materials uploaded","Notes and learning files shared by teachers will appear here.")+'</article></div>';
+    }else if(id==="performance"){
+      content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">ACADEMIC RECORD</p><h2>Performance & report cards</h2><p class="muted">Only results officially entered and published by the school should appear here.</p></div></div><div class="student-content-card"><div class="student-empty"><span aria-hidden="true">▤</span><h3>No report cards available</h3><p>Your examination results and report cards will appear here after the school publishes them.</p><button type="button" class="student-download-btn" disabled title="Available after a report card is published">Download report card</button></div></div>';
+    }else if(id==="attendance"){
+      content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">SCHOOL RECORD</p><h2>Attendance</h2><p class="muted">Review your attendance once the school begins recording it in the portal.</p></div></div><div class="student-content-card">'+empty("No attendance record yet","Your attendance history and summary will appear here after records are entered by the school.")+'</div>';
+    }else{
+      content.innerHTML='<div class="student-section-heading"><div><p class="student-kicker">PERSONAL DETAILS</p><h2>My Account</h2><p class="muted">Your registered details. Contact the school to correct information.</p></div></div><div class="student-content-card student-account-grid">'+[["Full name",u.full_name],["Father’s name",u.father_name],["Surname",u.surname],["Arabic name",u.arabic_name],["Date of birth",u.date_of_birth],["Gender",u.gender],["Nationality",u.nationality],["Phone",u.phone],["Student ID",u.student_id],["Class",u.class_name],["Email / login",u.email]].map(([k,v])=>'<div><small>'+k+'</small><strong>'+esc(v||"—")+'</strong></div>').join("")+'</div>';
+    }
+  }
+  root.querySelectorAll("[data-student-tab]").forEach(btn=>btn.addEventListener("click",()=>panel(btn.dataset.studentTab)));
+  panel("overview");
+}
 async function refreshStudents(){
   const d=await api("/api/admin/students",null,"GET");
   const list=$("studentList");
