@@ -395,8 +395,13 @@ def download_student_report_card(report_id):
         row=conn.execute("SELECT file_name,file_data FROM student_report_cards WHERE id=%s AND student_user_id=%s",(report_id,session["user_id"])).fetchone()
     if not row:
         return jsonify({"error":"Report card not found."}),404
-    name="".join(ch for ch in row["file_name"] if ch.isalnum() or ch in " ._-")[:120] or "report-card.pdf"
-    return Response(bytes(row["file_data"]),mimetype="application/pdf",headers={"Content-Disposition":'attachment; filename="'+name+'"',"X-Content-Type-Options":"nosniff"})
+    from urllib.parse import quote
+    original_name = str(row["file_name"] or "report-card.pdf")
+    # Use an ASCII fallback plus RFC 5987 UTF-8 filename for Arabic and other Unicode names.
+    ascii_name = "".join(ch for ch in original_name if ch.isascii() and (ch.isalnum() or ch in " ._-"))[:100].strip(" .") or "report-card.pdf"
+    encoded_name = quote(original_name, safe="")
+    disposition = 'attachment; filename="' + ascii_name.replace('"', "") + '"; filename*=UTF-8\'\'' + encoded_name
+    return Response(bytes(row["file_data"]),mimetype="application/pdf",headers={"Content-Disposition":disposition,"X-Content-Type-Options":"nosniff"})
 
 @app.get("/api/admin/report-cards")
 @admin_required
